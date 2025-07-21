@@ -1,0 +1,90 @@
+{
+    "version": 8,
+    "center": [
+        -74.006,
+        40.7128
+    ],
+    "zoom": 12,
+    "sources": {
+        "osm-background": {
+            "type": "raster",
+            "tiles": [
+                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            ],
+            "tileSize": 256,
+            "attribution": "© OpenStreetMap contributors"
+        },
+        "subway-stations": {
+            "type": "geojson",
+            "data": "./data/subway-stations.geojson",
+            "attribution": "NYC OpenData"
+        },
+        "bike-routes": {
+            "type": "geojson",
+            "data": "./data/bike-routes.geojson"
+        }
+    },
+    "layers": [
+        {
+            "id": "background-osm",
+            "type": "raster",
+            "source": "osm-background"
+        },
+        {
+            "id": "bike-routes-layer",
+            "type": "line",
+            "source": "bike-routes",
+            "paint": {
+                "line-color": "#088",
+                "line-width": 3
+            },
+            "layout": {
+                "visibility": "none"
+            }
+        },
+        {
+            "id": "subway-stations-layer",
+            "type": "symbol",
+            "source": "subway-stations",
+            "layout": {
+                "icon-image": "peak",
+                "icon-size": 0.8,
+                "icon-allow-overlap": true,
+                "visibility": "visible"
+            }
+        }
+    ],
+    "customUi": {
+        "panel": {
+            "backgroundColor": "#f8f9fa",
+            "width": "350px"
+        },
+        "controls": {
+            "zoom": true,
+            "scale": true,
+            "layerChooser": true,
+            "fullscreen": true,
+            "attribution": true
+        },
+        "layerChooser": {
+            "backgroundLayers": [
+                {
+                    "id": "background-osm",
+                    "name": "Street Map"
+                }
+            ],
+            "dataLayers": [
+                {
+                    "id": "subway-stations-layer",
+                    "name": "Subway Stations",
+                    "visible": true
+                },
+                {
+                    "id": "bike-routes-layer",
+                    "name": "Bike Routes",
+                    "visible": false
+                }
+            ]
+        }
+    }
+}

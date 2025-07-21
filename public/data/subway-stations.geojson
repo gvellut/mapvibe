@@ -1,0 +1,20 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -74.006,
+                    40.7128
+                ]
+            },
+            "properties": {
+                "title": "Sample Station",
+                "description": "<p>This is a <b>sample</b> description.</p>",
+                "imageUrl": "https://via.placeholder.com/400x200"
+            }
+        }
+    ]
+}
