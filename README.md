@@ -52,6 +52,15 @@ Add the following HTML snippet to your web page. Adjust the `src` attribute to p
 
 The application's behavior is entirely driven by a JSON file that extends the **MapLibre Style Specification** with a custom `customUi` object.
 
+Note:
+
+```
+"line-dasharray": [2, 2]
+"layout": {
+    "visibility": "none"
+}
+```
+
 #### **Core Structure**
 
 The JSON file follows the standard MapLibre style, defining `sources` and `layers`. For interactivity and custom controls, the `customUi` object is used.

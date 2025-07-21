@@ -39,7 +39,7 @@
                 "line-width": 3
             },
             "layout": {
-                "visibility": "none"
+                "visibility": "visible"
             }
         },
         {
@@ -52,6 +52,13 @@
                 "icon-allow-overlap": true,
                 "visibility": "visible"
             }
+        }
+    ],
+    "customImageResources": [
+        {
+            "id": "peak",
+            "url": "assets/markers/mountain.png",
+            "pixelRatio": 2
         }
     ],
     "customUi": {

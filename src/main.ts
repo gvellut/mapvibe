@@ -1,4 +1,4 @@
-import maplibregl, { LngLatBounds, Map } from 'maplibre-gl';
+import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import './style.scss';
 
 // --- TYPE DEFINITIONS for custom config properties ---
@@ -32,7 +32,7 @@ interface CustomUiConfig {
 }
 
 // --- MAIN APPLICATION INITIALIZATION ---
-// REPLACE THE OLD initializeApp WITH THIS ONE
+// REPLACE THE OLD initializeApp WITH THIS FINAL VERSION
 async function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
     const configUrl = urlParams.get('config');
@@ -49,30 +49,65 @@ async function initializeApp() {
         }
         const config = await response.json();
 
-        // Create the map
-        const map = new Map({
+        // --- THE PLACEHOLDER STRATEGY ---
+        // This prevents the map from trying to load icons before we've added them.
+        // warning in console :
+        // "peak" could not be loaded. Please make sure you have added the image with map.addImage() or a "sprite" property in your style.
+        // You can provide missing images by listening for the "styleimagemissing" map event.
+        // although it does not cause error
+
+        // 1. PREPARE THE CONFIG
+        const PLACEHOLDER_ID = 'placeholder-icon-sync';
+        // Get the set of all icon IDs we need to manage.
+        const customImageIds = new Set((config.customImageResources || []).map((img: any) => img.id));
+        // This will store the original icon for each layer we modify.
+        const originalLayerIcons = new Map<string, string>();
+
+        // Loop through layers IN MEMORY and temporarily replace custom icons.
+        for (const layer of config.layers) {
+            const iconImage = layer.layout?.['icon-image'];
+            if (iconImage && customImageIds.has(iconImage)) {
+                originalLayerIcons.set(layer.id, iconImage); // Save original icon
+                layer.layout['icon-image'] = PLACEHOLDER_ID; // Set placeholder
+            }
+        }
+
+        // 2. CREATE THE MAP with the modified config.
+        // All sources and layers will load, but pointing to a safe placeholder.
+        const map = new maplibregl.Map({
             container: 'map',
-            style: config,
-            attributionControl: false // We add it manually based on config
+            style: config, // Use the MODIFIED config
+            attributionControl: false
         });
 
+        // 3. ADD THE PLACEHOLDER IMAGE IMMEDIATELY AND SYNCHRONOUSLY
+        // This is the key to preventing the error. It happens right after map creation,
+        // before the first render can fail. We add a single 1x1 transparent pixel.
+        map.addImage(PLACEHOLDER_ID, {
+            width: 1,
+            height: 1,
+            data: new Uint8Array(4) // A single transparent RGBA pixel
+        });
 
-        // Set up the on-demand image loading *before* the map's 'load' event.
-        // This ensures the listener is ready as soon as the map starts parsing the style.
-        setupImageLoading(map);
+        // 4. START LOADING THE REAL IMAGES IN THE BACKGROUND
+        // Now that the map exists, we can call our function. This returns a promise.
+        const imagesLoadedPromise = loadCustomImagesFromConfig(map, config);
 
-
-        // Wait for the map to load before adding controls and layers
+        // 5. ONCE THE MAP STYLE IS LOADED, SWAP THE ICONS BACK
         map.on('load', async () => {
-            // If center/zoom are not in config, fit to bounds of all GeoJSON sources
+            // Wait for the background image loading to complete.
+            await imagesLoadedPromise;
+
+            // Now that the real images are in the map's registry, swap the icons back.
+            for (const [layerId, originalIconId] of originalLayerIcons.entries()) {
+                map.setLayoutProperty(layerId, 'icon-image', originalIconId);
+            }
+
+            // Finally, with the map fully and correctly rendered, run the rest of the setup.
             if (!config.center && !config.zoom) {
                 await fitMapToBounds(map, config.sources);
             }
-
-            // Initialize all UI components based on the config
             initializeUiComponents(map, config);
-
-            // Setup feature interaction (hover cursor and click panel)
             setupFeatureInteraction(map, config);
         });
 
@@ -86,7 +121,7 @@ async function initializeApp() {
 /**
  * Initializes all UI components like controls and panels.
  */
-function initializeUiComponents(map: Map, config: any) {
+function initializeUiComponents(map: maplibregl.Map, config: any) {
     const uiConfig: CustomUiConfig = config.customUi;
     if (!uiConfig || !uiConfig.controls) return;
 
@@ -117,7 +152,7 @@ function initializeUiComponents(map: Map, config: any) {
 /**
  * Creates and manages the custom layer chooser control.
  */
-function setupLayerChooser(map: Map, chooserConfig: LayerChooserConfig) {
+function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfig) {
     const controlContainer = document.createElement('div');
     controlContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser';
 
@@ -220,7 +255,7 @@ function setupLayerChooser(map: Map, chooserConfig: LayerChooserConfig) {
 /**
  * Creates the "Full screen" button.
  */
-function setupFullscreenButton(map: Map) {
+function setupFullscreenButton(map: maplibregl.Map) {
     const fullscreenBtn = document.createElement('button');
     fullscreenBtn.className = 'maplibregl-ctrl custom-fullscreen-btn';
     fullscreenBtn.textContent = 'Full screen';
@@ -234,7 +269,7 @@ function setupFullscreenButton(map: Map) {
 /**
  * Creates the info panel DOM structure and appends it to the body.
  */
-function setupInfoPanel(map: Map, panelConfig: CustomUiConfig['panel']) {
+function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel']) {
     const panel = document.createElement('div');
     panel.id = 'info-panel';
     panel.style.backgroundColor = panelConfig.backgroundColor;
@@ -273,7 +308,7 @@ function setupInfoPanel(map: Map, panelConfig: CustomUiConfig['panel']) {
 /**
  * Manages hover and click events on the map to show feature info.
  */
-function setupFeatureInteraction(map: Map, config: any) {
+function setupFeatureInteraction(map: maplibregl.Map, config: any) {
     const clickableLayerIds = getClickableLayerIds(config);
 
     map.on('mousemove', (e) => {
@@ -331,7 +366,7 @@ function displayError(message: string) {
 /**
  * Calculates the bounding box of all GeoJSON sources and fits the map view.
  */
-async function fitMapToBounds(map: Map, sources: any) {
+async function fitMapToBounds(map: maplibregl.Map, sources: any) {
     const bounds = new LngLatBounds();
     const geojsonFetches: Promise<any>[] = [];
 
@@ -380,38 +415,36 @@ function getClickableLayerIds(config: any): string[] {
     return clickableSourceNames;
 }
 
-interface MarkerInfo {
-    url: string;
-    pixelRatio?: number;
-}
+/**
+ * Reads image definitions from the config, loads them, and adds them to the map.
+ * This should be called after the map's style is loaded.
+ */
+async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any) {
+    const customImages = config.customImageResources;
+    if (!customImages || !Array.isArray(customImages)) {
+        return; // No custom images to load
+    }
 
-const MARKERS: Record<string, MarkerInfo> = {
-    "peak": { url: `assets/markers/mountain.png`, pixelRatio: 2 }
-};
+    const imageLoadPromises: Promise<void>[] = [];
 
-function setupImageLoading(map: Map) {
-    map.on('styleimagemissing', async (e) => {
-        const imageId = e.id;
+    for (const imageInfo of customImages) {
+        if (!imageInfo.id || !imageInfo.url) continue;
 
-        // Check if the missing image is one of our custom markers
-        const markerInfo = MARKERS[imageId];
-        if (!markerInfo) return;
-
-        console.log("missing " + e.id);
-
-        try {
-            // Asynchronously load the image
-            const image = await map.loadImage(markerInfo.url);
-
-            // Check if the image has already been added to prevent errors
-            // in case this event fires multiple times for the same image.
-            if (!map.hasImage(imageId)) {
-                map.addImage(imageId, image.data, { pixelRatio: markerInfo.pixelRatio || 1 });
+        const promise = (async () => {
+            try {
+                const image = await map.loadImage(imageInfo.url);
+                if (!map.hasImage(imageInfo.id)) {
+                    map.addImage(imageInfo.id, image.data, { pixelRatio: imageInfo.pixelRatio || 1 });
+                }
+            } catch (error) {
+                console.error(`Error loading image ${imageInfo.id} from ${imageInfo.url}:`, error);
             }
-        } catch (error) {
-            console.error(`Failed to load image "${imageId}":`, error);
-        }
-    });
+        })();
+        imageLoadPromises.push(promise);
+    }
+
+    // Wait for all images to be loaded and added before proceeding
+    await Promise.all(imageLoadPromises);
 }
 
 // --- START THE APP ---
