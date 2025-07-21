@@ -32,6 +32,7 @@ interface CustomUiConfig {
 }
 
 // --- MAIN APPLICATION INITIALIZATION ---
+// REPLACE THE OLD initializeApp WITH THIS ONE
 async function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
     const configUrl = urlParams.get('config');
@@ -55,15 +56,18 @@ async function initializeApp() {
             attributionControl: false // We add it manually based on config
         });
 
+
+        // Set up the on-demand image loading *before* the map's 'load' event.
+        // This ensures the listener is ready as soon as the map starts parsing the style.
+        setupImageLoading(map);
+
+
         // Wait for the map to load before adding controls and layers
         map.on('load', async () => {
             // If center/zoom are not in config, fit to bounds of all GeoJSON sources
             if (!config.center && !config.zoom) {
                 await fitMapToBounds(map, config.sources);
             }
-
-            // Load custom images for icons
-            await loadCustomImages(map, config.layers);
 
             // Initialize all UI components based on the config
             initializeUiComponents(map, config);
@@ -385,33 +389,30 @@ const MARKERS: Record<string, MarkerInfo> = {
     "peak": { url: `assets/markers/mountain.png`, pixelRatio: 2 }
 };
 
-/**
- * Pre-loads images required for layer icons.
- */
-async function loadCustomImages(map: Map, layers: any[]) {
-    const imageLoadPromises: Promise<void>[] = [];
-    const loadedIcons = new Set<string>();
+function setupImageLoading(map: Map) {
+    map.on('styleimagemissing', async (e) => {
+        const imageId = e.id;
 
-    for (const layer of layers) {
-        const iconImage = layer.layout?.['icon-image'];
-        if (iconImage && !loadedIcons.has(iconImage)) {
-            loadedIcons.add(iconImage);
-            const markerInfo = MARKERS[iconImage];
-            if (!markerInfo) continue;
+        // Check if the missing image is one of our custom markers
+        const markerInfo = MARKERS[imageId];
+        if (!markerInfo) return;
 
-            const { url: imageUrl, pixelRatio } = markerInfo;
+        console.log("missing " + e.id);
 
-            const promise = (async () => {
-                const image = await map.loadImage(imageUrl);
-                map.addImage(iconImage, image.data, { pixelRatio: pixelRatio || 1 });
-            })();
-            imageLoadPromises.push(promise);
+        try {
+            // Asynchronously load the image
+            const image = await map.loadImage(markerInfo.url);
+
+            // Check if the image has already been added to prevent errors
+            // in case this event fires multiple times for the same image.
+            if (!map.hasImage(imageId)) {
+                map.addImage(imageId, image.data, { pixelRatio: markerInfo.pixelRatio || 1 });
+            }
+        } catch (error) {
+            console.error(`Failed to load image "${imageId}":`, error);
         }
-    }
-
-    await Promise.all(imageLoadPromises).catch(console.error);
+    });
 }
-
 
 // --- START THE APP ---
 initializeApp();
