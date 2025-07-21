@@ -168,12 +168,14 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
     bgHeader.textContent = 'Background Layers';
     panel.appendChild(bgHeader);
 
+
+    let defaultActiveLayerIndex = 0;
     chooserConfig.backgroundLayers.forEach((layer, index) => {
         const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'background-layer';
         input.id = `bg-${layer.id}`;
-        input.checked = index === 0; // First one is active by default
+        input.checked = index === defaultActiveLayerIndex; // First one is active by default
         input.onchange = () => {
             // Set layer visibility
             chooserConfig.backgroundLayers.forEach(l => {
@@ -192,6 +194,10 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
             const maxZoom = layer.maxZoom ?? chooserConfig.globalMaxZoom;
             const currentZoom = map.getZoom();
 
+            // Enforce the new zoom boundaries on the map instance.
+            map.setMinZoom(minZoom ?? null);
+            map.setMaxZoom(maxZoom ?? null);
+
             if (maxZoom !== undefined && currentZoom > maxZoom) {
                 map.zoomTo(maxZoom);
             } else if (minZoom !== undefined && currentZoom < minZoom) {
@@ -207,6 +213,16 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
         div.appendChild(label);
         panel.appendChild(div);
     });
+
+    // Set initial zoom constraints based on the default active layer
+    // the first 
+    const defaultLayer = chooserConfig.backgroundLayers[defaultActiveLayerIndex];
+    if (defaultLayer) {
+        const minZoom = defaultLayer.minZoom ?? chooserConfig.globalMinZoom;
+        const maxZoom = defaultLayer.maxZoom ?? chooserConfig.globalMaxZoom;
+        map.setMinZoom(minZoom ?? null);
+        map.setMaxZoom(maxZoom ?? null);
+    }
 
     // Data Layers (Checkboxes)
     const dataHeader = document.createElement('h4');

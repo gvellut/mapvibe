@@ -74,6 +74,8 @@
             "attribution": true
         },
         "layerChooser": {
+            "globalMinZoom": 5,
+            "globalMaxZoom": 18,
             "backgroundLayers": [
                 {
                     "id": "background-osm",

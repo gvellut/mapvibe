@@ -61,6 +61,11 @@ Note:
 }
 ```
 
+Services web essentiels:
+
+https://geoservices.ign.fr/services-web-essentiels
+
+
 #### **Core Structure**
 
 The JSON file follows the standard MapLibre style, defining `sources` and `layers`. For interactivity and custom controls, the `customUi` object is used.
