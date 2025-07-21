@@ -1,0 +1,59 @@
+v1
+
+Read the spec. Explicit all the things that need to be explicited : structure, names, details (for example, measurements or values), formula If unclear, you can ask for details.
+Include commands for project creation, instructions for adding dependencies, editing other characteristics of the project metadata, running a build or interactive testing. 
+The goal is not to write code but generate a complete spec to be passed to another session of Gemini. That tool will need to generate the code.
+Unless you are asking for clarification, format your output as a detailed spec for an implementer. You can reuse the wording or reword it so it is clearer and non-ambiguous
+!!!! DO NOT WRITE CODE !!!! except pseudo-code if shorter than writing normal-speech descrition
+
+- Disregard the above, mostly : For this first version of the specification, explicit the versions of the dependencies / languages / libraries. Explicit the choices I gave you and make a choice for the options and why (succintly).  Or if the requirements I gave cannot be satisfied, explain the blockers and other options to consider.
+- Do not go into too much detail
+
+- Create a software
+- The goal of this software is to produce a map interface similar to the embeddd Google My Maps. It should be a static HTML page (and CSS) that loads a static Javascript program, that produces a suitable user interface.
+- For recall, the Google My Maps interface is embedded as 
+<iframe loading="lazy" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"  src="https://www.google.com/maps/d/u/0/embed?mid=1W0m9GW_BlrIHj0XkzFGjXFR4pMWfBEo&ehbc=2E312F&noprof=1" width="100%" height="550"></iframe>
+- The interface URL will be on a server I control : it should not matter for development since the page will be loaded by me (in development) or as an embedded iframe in production setting.
+- The map interface will be included in a normal page as an iframe with explicit width and height dimensions so the interface should take the whole page with no white space
+- The code for the interface should be static on the server side and run entirely on the client side.
+- The code for the interface should be developed in TypeScript (the most recent version) and using Vite, with as few dependencies as possible. The TS code itself should be single file. Other assets (like HTML or CSS) can in other files.
+- The build should generate a single JS file for embedding inside an HTML page (also provided as part of the tool). Other assets like CSS should also be provided: It is possible to use SASS/SCSS and compile the CSS as part of the build.
+- The map interface should use MapLibre GL.
+- No automatic testing : framework or code.
+- The url will take as URL parameter a path (on the same server as the interface server). That URL will not be processed on the server side, but only on the client side : so the static page will be fetched, then the code will read the params of the current page and fetch that config file for initialisation
+- the config file will be JSON.
+- You can use an already defined config document type (included as part of MapLibre GL) or define a new one. If reusing a format, it doesn't matter if it has more capabilities. If there is an already existing format well supported by MapLibre GL that includes most of the requirements but not all, mention it and discuss the missing features.
+- The config file will need to include a list of background layers (raster tiled layers are sufficient) but possible to include vector tiled layers (with style) if MapLibre GL already includes it as a base functionality. One of them should be the default (possibly the first one). The format for the raster layers will be the URL + some description (for display) + copyright notice
+    * The background layers will be in EPSG:3857 (web mercator). There is no need to handle complex reprojection (since the data will be WGS84)
+- The config fille will also define multiple layers (line, polygon, points). They will be styled : the lines can have color, width (in pixel is sufficient) and some line sttyles (like plain, or dashed). The points will have a PNG icon, with a way to place it relative to the point position (in priority : a circular icon, whose center will be placed identical to the point position). The polygons will have a fill color (including opacity) and a contour color (or none).
+    * currently, each feature has a unique style that can be explicit. There is no need for a renderer like unique value renderer or uniform renderer or data-dependent renderer but mention if that possibility is included in MapLibre GL as a base functionality.
+    * the data layers will be in WGS84 (EPSG:4326)
+- The geographic data of the layers will be GeoJSON.
+- The features can be clicked on (or possibly not). If clickable, there should be a change in the mouse cursor style on hover. A panel will open on the left side 
+    * on mobile, instead of the left side : the full page is taken. (but on iPAd and the like same as desktop)
+    * there is a button with a left arrow to close the panel
+    * the panel can include a title, a description (in HTML) and an image. The image if present will be at the top, then the title, then the description.
+    * the styles of the panels will be uniformed (not dependant of the data layers). 
+    * the panel will take the whole height of the interface ; the width can be configured either fixed pixel size or percent width
+    * The background color of the panel can be configured in the config document
+- the extent is explicit in the config document, or if missing is the extent of all the elements + some margin
+- there are map controls : Their presence can be configured ion the config document. They can use whatever comes with Maplibre GL
+    * zoom + and -
+    * scale bar (simple)
+    * a background layer chooser (only a single layer present at a time)
+    * a data layer chooser (checkboxes)
+    * there is full screen button (just icon) that will display another tab with the same URL as the iframe (ie same configuration file)
+    * the copyright Attribution can be displayed at the bottom
+
+
+v2
+
+Include the following changes in the spec :
+
+- Use node and npm (not yarn). 
+- The image attached to a feature : when displayed on the left panel, the image will take the full width of the panel.
+- Detail the position of the controls (default).
+    * By default, zoom  + - will be on the upper left
+    * the background + data layer chooser will combined and on the upper right with a layer icon (like with leaflet) : see attached image. It will need a click (not just hover) and the chooser will diplayed on top of the icon, not in the center.
+    * the attribution will be on the lower right
+    * the FullScreen button will be small and full text ("Full screen") next to the attribution menu on the right of it.

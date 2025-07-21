@@ -1,0 +1,3 @@
+the markers I have are hidpi : how to reduce the size of the markers so they are 2x. Need to modify in the config to indicate that the markers are 2x. And handle that in the code
+
+how to restrict the zoom levels of the background layers. I need either to restrict the zoom levels globally OR restrict for each type of background layer. In the latter case, the map needs to unzoom if the new background layer chosen by the user has a lower max zoom or zoom if it has a bigger min zoom.

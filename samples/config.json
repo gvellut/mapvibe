@@ -1,8 +1,8 @@
 {
     "version": 8,
     "center": [
-        -74.006,
-        40.7128
+        6.224185,
+        45.728743
     ],
     "zoom": 12,
     "sources": {
@@ -16,12 +16,12 @@
         },
         "subway-stations": {
             "type": "geojson",
-            "data": "./data/subway-stations.geojson",
+            "data": "samples/data/subway-stations.geojson",
             "attribution": "NYC OpenData"
         },
         "bike-routes": {
             "type": "geojson",
-            "data": "./data/bike-routes.geojson"
+            "data": "samples/data/bike-routes.geojson"
         }
     },
     "layers": [
@@ -76,13 +76,11 @@
             "dataLayers": [
                 {
                     "id": "subway-stations-layer",
-                    "name": "Subway Stations",
-                    "visible": true
+                    "name": "Subway Stations"
                 },
                 {
                     "id": "bike-routes-layer",
-                    "name": "Bike Routes",
-                    "visible": false
+                    "name": "Bike Routes"
                 }
             ]
         }

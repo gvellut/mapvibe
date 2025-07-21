@@ -1,0 +1,20 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Sample Station",
+                "description": "<p>This is a <b>sample</b> description.</p>",
+                "imageUrl": "https://live.staticflickr.com/65535/54667828458_2b5b764021_z.jpg"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.224185,
+                    45.728743
+                ]
+            }
+        }
+    ]
+}

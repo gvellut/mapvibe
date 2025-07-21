@@ -2,6 +2,20 @@ import maplibregl, { LngLatBounds, Map } from 'maplibre-gl';
 import './style.scss';
 
 // --- TYPE DEFINITIONS for custom config properties ---
+interface BackgroundLayerConfig {
+    id: string;
+    name: string;
+    minZoom?: number;
+    maxZoom?: number;
+}
+
+interface LayerChooserConfig {
+    backgroundLayers: BackgroundLayerConfig[];
+    dataLayers: { id: string; name: string; visible: boolean }[];
+    globalMinZoom?: number;
+    globalMaxZoom?: number;
+}
+
 interface CustomUiConfig {
     panel: {
         backgroundColor: string;
@@ -14,10 +28,7 @@ interface CustomUiConfig {
         fullscreen?: boolean;
         attribution?: boolean;
     };
-    layerChooser: {
-        backgroundLayers: { id: string; name: string }[];
-        dataLayers: { id: string; name: string; visible: boolean }[];
-    }
+    layerChooser: LayerChooserConfig;
 }
 
 // --- MAIN APPLICATION INITIALIZATION ---
@@ -78,7 +89,9 @@ function initializeUiComponents(map: Map, config: any) {
     const controls = uiConfig.controls;
 
     if (controls.zoom) {
-        map.addControl(new maplibregl.NavigationControl(), 'top-left');
+        map.addControl(new maplibregl.NavigationControl({
+            showCompass: false
+        }), 'top-left');
     }
     if (controls.scale) {
         map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
@@ -100,7 +113,7 @@ function initializeUiComponents(map: Map, config: any) {
 /**
  * Creates and manages the custom layer chooser control.
  */
-function setupLayerChooser(map: Map, chooserConfig: CustomUiConfig['layerChooser']) {
+function setupLayerChooser(map: Map, chooserConfig: LayerChooserConfig) {
     const controlContainer = document.createElement('div');
     controlContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser';
 
@@ -123,9 +136,28 @@ function setupLayerChooser(map: Map, chooserConfig: CustomUiConfig['layerChooser
         input.id = `bg-${layer.id}`;
         input.checked = index === 0; // First one is active by default
         input.onchange = () => {
+            // Set layer visibility
             chooserConfig.backgroundLayers.forEach(l => {
                 map.setLayoutProperty(l.id, 'visibility', l.id === layer.id ? 'visible' : 'none');
             });
+
+            // Adjust map zoom to fit the new layer's constraints
+            // "globalMinZoom": 5,
+            // "globalMaxZoom": 18,
+            // "backgroundLayers": [
+            //   { "id": "osm-streets", "name": "Streets" },
+            //   { "id": "satellite", "name": "Satellite", "minZoom": 8, "maxZoom": 20 },
+            //   { "id": "topo", "name": "Topographic", "maxZoom": 15 }
+            // ],
+            const minZoom = layer.minZoom ?? chooserConfig.globalMinZoom;
+            const maxZoom = layer.maxZoom ?? chooserConfig.globalMaxZoom;
+            const currentZoom = map.getZoom();
+
+            if (maxZoom !== undefined && currentZoom > maxZoom) {
+                map.zoomTo(maxZoom);
+            } else if (minZoom !== undefined && currentZoom < minZoom) {
+                map.zoomTo(minZoom);
+            }
         };
         const label = document.createElement('label');
         label.htmlFor = input.id;
@@ -146,7 +178,7 @@ function setupLayerChooser(map: Map, chooserConfig: CustomUiConfig['layerChooser
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.id = `data-${layer.id}`;
-        input.checked = layer.visible;
+        input.checked = map.getLayoutProperty(layer.id, 'visibility') === 'visible';
         input.onchange = (e) => {
             const isVisible = (e.target as HTMLInputElement).checked;
             map.setLayoutProperty(layer.id, 'visibility', isVisible ? 'visible' : 'none');
@@ -204,9 +236,12 @@ function setupInfoPanel(map: Map, panelConfig: CustomUiConfig['panel']) {
     panel.style.backgroundColor = panelConfig.backgroundColor;
     panel.style.width = panelConfig.width;
 
+    const panelHeader = document.createElement('div');
+    panelHeader.id = 'info-panel__header';
+
     const closeButton = document.createElement('button');
     closeButton.id = 'info-panel__close-btn';
-    closeButton.innerHTML = '←'; // Left arrow
+    closeButton.innerHTML = '✕';
     closeButton.onclick = () => {
         panel.style.display = 'none';
         const mapContainer = map.getContainer();
@@ -215,11 +250,19 @@ function setupInfoPanel(map: Map, panelConfig: CustomUiConfig['panel']) {
         map.resize();
     };
 
-    const content = document.createElement('div');
-    content.id = 'info-panel__content';
+    panelHeader.appendChild(closeButton);
+    panel.appendChild(panelHeader);
 
-    panel.appendChild(closeButton);
-    panel.appendChild(content);
+    const contentImg = document.createElement('div');
+    contentImg.id = 'info-panel__content-img';
+
+    panel.appendChild(contentImg);
+
+    const contentText = document.createElement('div');
+    contentText.id = 'info-panel__content-text';
+
+    panel.appendChild(contentText);
+
     document.body.appendChild(panel);
 }
 
@@ -242,20 +285,23 @@ function setupFeatureInteraction(map: Map, config: any) {
         const properties = feature.properties;
 
         const panel = document.getElementById('info-panel') as HTMLDivElement;
-        const panelContent = document.getElementById('info-panel__content') as HTMLDivElement;
+        const panelContentImg = document.getElementById('info-panel__content-img') as HTMLDivElement;
+        const panelContentText = document.getElementById('info-panel__content-text') as HTMLDivElement;
 
-        // Build panel content
-        let html = '';
+        let htmlImg = '';
         if (properties.imageUrl) {
-            html += `<img src="${properties.imageUrl}" alt="${properties.title || ''}">`;
+            htmlImg += `<img src="${properties.imageUrl}" alt="${properties.title || ''}" style="width: 100%; height: auto; display: block;">`;
         }
+        panelContentImg.innerHTML = htmlImg
+
+        let html = '';
         if (properties.title) {
             html += `<h1>${properties.title}</h1>`;
         }
         if (properties.description) {
             html += `<div>${properties.description}</div>`;
         }
-        panelContent.innerHTML = html;
+        panelContentText.innerHTML = html;
 
         // Show panel and resize map
         panel.style.display = 'block';
@@ -330,8 +376,13 @@ function getClickableLayerIds(config: any): string[] {
     return clickableSourceNames;
 }
 
-const MARKERS: Record<string, string> = {
-    "peak": `/markers/mountain.png`
+interface MarkerInfo {
+    url: string;
+    pixelRatio?: number;
+}
+
+const MARKERS: Record<string, MarkerInfo> = {
+    "peak": { url: `assets/markers/mountain.png`, pixelRatio: 2 }
 };
 
 /**
@@ -345,13 +396,14 @@ async function loadCustomImages(map: Map, layers: any[]) {
         const iconImage = layer.layout?.['icon-image'];
         if (iconImage && !loadedIcons.has(iconImage)) {
             loadedIcons.add(iconImage);
-            // For this example, we assume a generic public URL for a marker.
-            // In a real app, you might have a map of icon names to URLs.
-            const imageUrl = MARKERS[iconImage];
+            const markerInfo = MARKERS[iconImage];
+            if (!markerInfo) continue;
+
+            const { url: imageUrl, pixelRatio } = markerInfo;
 
             const promise = (async () => {
                 const image = await map.loadImage(imageUrl);
-                map.addImage(iconImage, image.data);
+                map.addImage(iconImage, image.data, { pixelRatio: pixelRatio || 1 });
             })();
             imageLoadPromises.push(promise);
         }
