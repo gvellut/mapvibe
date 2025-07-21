@@ -63,7 +63,9 @@ Note:
 
 Services web essentiels:
 
-https://geoservices.ign.fr/services-web-essentiels
+- https://geoservices.ign.fr/services-web-essentiels
+- `GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2`
+- `ORTHOIMAGERY.ORTHOPHOTOS`
 
 
 #### **Core Structure**

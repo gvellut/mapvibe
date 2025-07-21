@@ -14,6 +14,22 @@
             "tileSize": 256,
             "attribution": "© OpenStreetMap contributors"
         },
+        "ign-plan": {
+            "type": "raster",
+            "tiles": [
+                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
+            ],
+            "tileSize": 256,
+            "attribution": "© IGN"
+        },
+        "ign-ortho": {
+            "type": "raster",
+            "tiles": [
+                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
+            ],
+            "tileSize": 256,
+            "attribution": "© IGN"
+        },
         "subway-stations": {
             "type": "geojson",
             "data": "samples/data/subway-stations.geojson",
@@ -29,6 +45,16 @@
             "id": "background-osm",
             "type": "raster",
             "source": "osm-background"
+        },
+        {
+            "id": "ign-plan",
+            "type": "raster",
+            "source": "ign-plan"
+        },
+        {
+            "id": "ign-ortho",
+            "type": "raster",
+            "source": "ign-ortho"
         },
         {
             "id": "bike-routes-layer",
@@ -80,6 +106,14 @@
                 {
                     "id": "background-osm",
                     "name": "Street Map"
+                },
+                {
+                    "id": "ign-plan",
+                    "name": "Plan IGN"
+                },
+                {
+                    "id": "background-osm",
+                    "name": "Aerial IGN"
                 }
             ],
             "dataLayers": [
