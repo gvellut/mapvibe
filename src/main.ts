@@ -286,9 +286,9 @@ function setupFullscreenButton(map: maplibregl.Map) {
     const fullscreenBtn = document.createElement('button');
     fullscreenBtn.className = 'maplibregl-ctrl custom-fullscreen-btn';
     fullscreenBtn.title = 'See larger';
-    fullscreenBtn.innerHTML = '<span style="display:inline-block;width:20px;height:20px;background:url(assets/layers-2x.png) center/20px 20px no-repeat;"></span>';
+    fullscreenBtn.innerHTML = '<span></span>';
     fullscreenBtn.onclick = () => window.open(window.location.href, '_blank');
-    map.getContainer().querySelector('.maplibregl-ctrl-bottom-right')?.appendChild(fullscreenBtn);
+    map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
 }
 
 

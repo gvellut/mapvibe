@@ -105,7 +105,7 @@
             "zoom": true,
             "scale": true,
             "layerChooser": true,
-            "fullscreen": true,
+            "fullscreen": false,
             "attribution": true
         },
         "backgroundLayers": [
