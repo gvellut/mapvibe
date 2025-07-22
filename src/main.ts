@@ -452,10 +452,18 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
         geojsons.forEach(geojson => {
             geojson.features.forEach((feature: any) => {
                 if (feature.geometry?.coordinates) {
-                    // This is a simplified bounds extension. For production, use a library 
-                    // or more robust logic to handle all geometry types (LineString, Polygon, etc).
                     if (feature.geometry.type === 'Point') {
                         bounds.extend(feature.geometry.coordinates as [number, number]);
+                    } else if (feature.geometry.type === 'LineString') {
+                        (feature.geometry.coordinates as [number, number][]).forEach(coord => {
+                            bounds.extend(coord);
+                        });
+                    } else if (feature.geometry.type === 'Polygon') {
+                        (feature.geometry.coordinates as [number, number][][]).forEach(ring => {
+                            ring.forEach(coord => {
+                                bounds.extend(coord);
+                            });
+                        });
                     }
                 }
             });
