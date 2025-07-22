@@ -309,10 +309,7 @@ function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel'
     closeButton.innerHTML = '✕';
     closeButton.onclick = () => {
         panel.style.display = 'none';
-        const mapContainer = map.getContainer();
-        mapContainer.classList.remove('panel-open');
-        mapContainer.style.removeProperty('--panel-width');
-        map.resize();
+        // No mapContainer class or style changes, no map.resize()
     };
     panelHeader.appendChild(closeButton);
     panel.appendChild(panelHeader);
@@ -353,10 +350,7 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
             const panel = document.getElementById('info-panel') as HTMLDivElement;
             if (panel && panel.style.display === 'block') {
                 panel.style.display = 'none';
-                const mapContainer = map.getContainer();
-                mapContainer.classList.remove('panel-open');
-                mapContainer.style.removeProperty('--panel-width');
-                map.resize();
+                // No mapContainer class or style changes, no map.resize()
             }
             return;
         }
@@ -382,12 +376,9 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         }
         panelContentText.innerHTML = html;
 
-        // Show panel and resize map
+        // Show panel only, do not move or resize map
         panel.style.display = 'block';
-        const mapContainer = map.getContainer();
-        mapContainer.classList.add('panel-open');
-        mapContainer.style.setProperty('--panel-width', panel.style.width);
-        map.resize();
+        // No mapContainer class or style changes, no map.resize()
     });
 
     // Close panel on map double click (zoom)
@@ -395,10 +386,7 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         const panel = document.getElementById('info-panel') as HTMLDivElement;
         if (panel && panel.style.display === 'block') {
             panel.style.display = 'none';
-            const mapContainer = map.getContainer();
-            mapContainer.classList.remove('panel-open');
-            mapContainer.style.removeProperty('--panel-width');
-            map.resize();
+            // No mapContainer class or style changes, no map.resize()
         }
     });
 
