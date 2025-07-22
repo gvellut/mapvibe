@@ -161,18 +161,33 @@ function initializeUiComponents(map: maplibregl.Map, config: any) {
         setupFullscreenButton(map);
     }
     if (controls.layerChooser) {
-        setupLayerChooser(map, uiConfig);
+        setupLayerChooser(map, config);
     }
 
     // Setup the side info panel (it's hidden by default)
-    setupInfoPanel(map, uiConfig.panel);
+    setupInfoPanel(uiConfig.panel);
+}
+
+function visibleBackgroundLayer(map: maplibregl.Map, uiConfig: CustomUiConfig) {
+    // Find the first background layer that is visible
+    const backgroundLayers = uiConfig.backgroundLayers;
+    for (const layer of backgroundLayers) {
+        if (map.getLayoutProperty(layer.id, 'visibility') === 'visible') {
+            return layer;
+        }
+    }
+    return null; // No visible background layer found
+}
+
+function findLayerWithId(layerId: string, config: any) {
+    return (Array.isArray(config.layers) ? config.layers.find((l: any) => l.id === layerId) : undefined) || {};
 }
 
 /**
  * Creates and manages the custom layer chooser control.
  */
-function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
-    const chooserConfig = uiConfig;
+function setupLayerChooser(map: maplibregl.Map, config: any) {
+    const chooserConfig: CustomUiConfig = config.customUi;
     const controlContainer = document.createElement('div');
     controlContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser';
 
@@ -188,9 +203,7 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
     bgHeader.textContent = 'Background Layers';
     panel.appendChild(bgHeader);
 
-
-    let defaultActiveLayerIndex = 0;
-    chooserConfig.backgroundLayers.forEach((layer, index) => {
+    chooserConfig.backgroundLayers.forEach((layer) => {
         const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'background-layer';
@@ -203,16 +216,10 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
                 map.setLayoutProperty(l.id, 'visibility', l.id === layer.id ? 'visible' : 'none');
             });
 
-            // Adjust map zoom to fit the new layer's constraints
-            // "globalMinZoom": 5,
-            // "globalMaxZoom": 18,
-            // "backgroundLayers": [
-            //   { "id": "osm-streets", "name": "Streets" },
-            //   { "id": "satellite", "name": "Satellite", "minZoom": 8, "maxZoom": 20 },
-            //   { "id": "topo", "name": "Topographic", "maxZoom": 15 }
-            // ],
-            const minZoom = layer.minZoom ?? chooserConfig.globalMinZoom;
-            const maxZoom = layer.maxZoom ?? chooserConfig.globalMaxZoom;
+            // Find the corresponding layer definition in config.layers
+            const mapLayer = findLayerWithId(layer.id, config);
+            const minZoom = (typeof mapLayer.minzoom === 'number' ? mapLayer.minzoom : chooserConfig.globalMinZoom);
+            const maxZoom = (typeof mapLayer.maxzoom === 'number' ? mapLayer.maxzoom : chooserConfig.globalMaxZoom);
             const currentZoom = map.getZoom();
 
             // Enforce the new zoom boundaries on the map instance.
@@ -237,13 +244,14 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
 
     // Set initial zoom constraints based on the default active layer
     // the first 
-    const defaultLayer = chooserConfig.backgroundLayers[defaultActiveLayerIndex];
-    if (defaultLayer) {
-        const minZoom = defaultLayer.minZoom ?? chooserConfig.globalMinZoom;
-        const maxZoom = defaultLayer.maxZoom ?? chooserConfig.globalMaxZoom;
+    // assume only one
+    let defaultBackgroundLayer = visibleBackgroundLayer(map, chooserConfig);
+    if (defaultBackgroundLayer) {
+        const mapLayer = findLayerWithId(defaultBackgroundLayer.id, config);
+        const minZoom = (typeof mapLayer.minzoom === 'number' ? mapLayer.minzoom : chooserConfig.globalMinZoom);
+        const maxZoom = (typeof mapLayer.maxzoom === 'number' ? mapLayer.maxzoom : chooserConfig.globalMaxZoom);
         map.setMinZoom(minZoom ?? null);
         map.setMaxZoom(maxZoom ?? null);
-
     }
 
     // Data Layers (Checkboxes)
@@ -335,7 +343,7 @@ function setupFullscreenButton(map: maplibregl.Map) {
 /**
  * Creates the info panel DOM structure and appends it to the body.
  */
-function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel']) {
+function setupInfoPanel(panelConfig: CustomUiConfig['panel']) {
     const panel = document.createElement('div');
     panel.id = 'info-panel';
     panel.style.backgroundColor = panelConfig.backgroundColor;
