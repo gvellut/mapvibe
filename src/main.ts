@@ -64,11 +64,22 @@ async function initializeApp() {
         // although it does not cause error
 
         // 1. PREPARE THE CONFIG
+        // Collect all icon-image ids used in layers BEFORE replacing with placeholder
+        const iconImageIds = new Set<string>();
+        if (Array.isArray(config.layers)) {
+            config.layers.forEach((layer: any) => {
+                const iconId = layer.layout?.['icon-image'];
+                if (typeof iconId === 'string') {
+                    iconImageIds.add(iconId);
+                }
+            });
+        }
+
         const PLACEHOLDER_ID = 'placeholder-icon-sync';
-        // Get the set of all icon IDs we need to manage.
-        const customImageIds = new Set((config.customImageResources || []).map((img: any) => img.id));
         // This will store the original icon for each layer we modify.
         const originalLayerIcons = new Map<string, string>();
+        // Get the set of all icon IDs we need to manage.
+        const customImageIds = new Set((config.customImageResources || []).map((img: any) => img.id));
 
         // Loop through layers IN MEMORY and temporarily replace custom icons.
         for (const layer of config.layers) {
@@ -98,7 +109,7 @@ async function initializeApp() {
 
         // 4. START LOADING THE REAL IMAGES IN THE BACKGROUND
         // Now that the map exists, we can call our function. This returns a promise.
-        const imagesLoadedPromise = loadCustomImagesFromConfig(map, config);
+        const imagesLoadedPromise = loadCustomImagesFromConfig(map, config, iconImageIds);
 
         // 5. ONCE THE MAP STYLE IS LOADED, SWAP THE ICONS BACK
         map.on('load', async () => {
@@ -292,6 +303,20 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
 
     // Expose for use in other functions
     (map as any)._closeLayerChooserPanel = closeLayerChooserPanel;
+
+    // Close panel on map double click (zoom)
+    map.on('dblclick', () => {
+        closeLayerChooserPanel(); // Close layer chooser on double click
+    });
+
+    // Close layer chooser on drag (pan)
+    map.on('dragstart', () => {
+        closeLayerChooserPanel();
+    });
+
+    map.on('click', () => {
+        closeLayerChooserPanel(); // Close layer chooser on map click
+    });
 }
 
 /**
@@ -349,20 +374,12 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
     const clickableLayerIds = getClickableLayerIds(config);
     let ignoreNextClick = false;
 
-    // Helper to close layer chooser if open
-    function closeLayerChooserIfOpen() {
-        if ((map as any)._closeLayerChooserPanel) {
-            (map as any)._closeLayerChooserPanel();
-        }
-    }
-
     map.on('mousemove', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
         map.getCanvas().style.cursor = features.length ? 'pointer' : '';
     });
 
     map.on('click', (e) => {
-        closeLayerChooserIfOpen(); // Close layer chooser on map click
         if (ignoreNextClick) {
             ignoreNextClick = false;
             return;
@@ -404,19 +421,12 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         // No mapContainer class or style changes, no map.resize()
     });
 
-    // Close panel on map double click (zoom)
     map.on('dblclick', () => {
-        closeLayerChooserIfOpen(); // Close layer chooser on double click
         const panel = document.getElementById('info-panel') as HTMLDivElement;
         if (panel && panel.style.display === 'block') {
             panel.style.display = 'none';
             // No mapContainer class or style changes, no map.resize()
         }
-    });
-
-    // Close layer chooser on drag (pan)
-    map.on('dragstart', () => {
-        closeLayerChooserIfOpen();
     });
 
 }
@@ -506,8 +516,7 @@ function getClickableLayerIds(config: any): string[] {
  * Reads image definitions from the config, loads them, and adds them to the map.
  * This should be called after the map's style is loaded.
  */
-async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any) {
-    // TODO check which images are referenced from data in config
+async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any, iconImageIds: Set<string>) {
     const customImages = config.customImageResources;
     if (!customImages || !Array.isArray(customImages)) {
         return; // No custom images to load
@@ -517,6 +526,7 @@ async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any) {
 
     for (const imageInfo of customImages) {
         if (!imageInfo.id || !imageInfo.url) continue;
+        if (!iconImageIds.has(imageInfo.id)) continue; // Only load if used in layers
 
         const promise = (async () => {
             try {
