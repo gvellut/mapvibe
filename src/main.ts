@@ -176,6 +176,8 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
         input.name = 'background-layer';
         input.id = `bg-${layer.id}`;
         input.checked = index === defaultActiveLayerIndex; // First one is active by default
+        map.setLayoutProperty(layer.id, 'visibility', input.checked ? 'visible' : 'none');
+
         input.onchange = () => {
             // Set layer visibility
             chooserConfig.backgroundLayers.forEach(l => {
@@ -222,6 +224,7 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
         const maxZoom = defaultLayer.maxZoom ?? chooserConfig.globalMaxZoom;
         map.setMinZoom(minZoom ?? null);
         map.setMaxZoom(maxZoom ?? null);
+
     }
 
     // Data Layers (Checkboxes)

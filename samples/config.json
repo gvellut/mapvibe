@@ -17,7 +17,7 @@
         "ign-plan": {
             "type": "raster",
             "tiles": [
-                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
+                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
             ],
             "tileSize": 256,
             "attribution": "© IGN"
@@ -32,8 +32,7 @@
         },
         "subway-stations": {
             "type": "geojson",
-            "data": "samples/data/subway-stations.geojson",
-            "attribution": "NYC OpenData"
+            "data": "samples/data/subway-stations.geojson"
         },
         "bike-routes": {
             "type": "geojson",
@@ -42,7 +41,7 @@
     },
     "layers": [
         {
-            "id": "background-osm",
+            "id": "osm-background",
             "type": "raster",
             "source": "osm-background"
         },
@@ -104,7 +103,7 @@
             "globalMaxZoom": 18,
             "backgroundLayers": [
                 {
-                    "id": "background-osm",
+                    "id": "osm-background",
                     "name": "Street Map"
                 },
                 {
@@ -112,7 +111,7 @@
                     "name": "Plan IGN"
                 },
                 {
-                    "id": "background-osm",
+                    "id": "ign-ortho",
                     "name": "Aerial IGN"
                 }
             ],
