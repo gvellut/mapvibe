@@ -9,11 +9,10 @@ interface BackgroundLayerConfig {
     maxZoom?: number;
 }
 
-interface LayerChooserConfig {
-    backgroundLayers: BackgroundLayerConfig[];
-    dataLayers: { id: string; name: string; visible: boolean }[];
-    globalMinZoom?: number;
-    globalMaxZoom?: number;
+interface DataLayerConfig {
+    id: string;
+    name: string;
+    interactive?: boolean;
 }
 
 interface CustomUiConfig {
@@ -28,7 +27,10 @@ interface CustomUiConfig {
         fullscreen?: boolean;
         attribution?: boolean;
     };
-    layerChooser: LayerChooserConfig;
+    backgroundLayers: BackgroundLayerConfig[];
+    dataLayers: DataLayerConfig[];
+    globalMinZoom?: number;
+    globalMaxZoom?: number;
 }
 
 // --- MAIN APPLICATION INITIALIZATION ---
@@ -48,6 +50,11 @@ async function initializeApp() {
             throw new Error(`Failed to fetch config file: ${response.statusText}`);
         }
         const config = await response.json();
+
+        // Set page title from config
+        if (config.title) {
+            document.title = config.title;
+        }
 
         // --- THE PLACEHOLDER STRATEGY ---
         // This prevents the map from trying to load icons before we've added them.
@@ -118,6 +125,7 @@ async function initializeApp() {
 
 // --- UI INITIALIZATION & SETUP ---
 
+
 /**
  * Initializes all UI components like controls and panels.
  */
@@ -127,22 +135,28 @@ function initializeUiComponents(map: maplibregl.Map, config: any) {
 
     const controls = uiConfig.controls;
 
+    // Set page title in info panel header
+    const infoPanelHeader = document.getElementById('info-panel__title');
+    if (infoPanelHeader && config.title) {
+        infoPanelHeader.textContent = config.title;
+    }
+
     if (controls.zoom) {
         map.addControl(new maplibregl.NavigationControl({
             showCompass: false
         }), 'top-left');
     }
     if (controls.scale) {
-        map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+        map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
     }
     if (controls.attribution) {
-        map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+        map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
     }
     if (controls.fullscreen) {
         setupFullscreenButton(map);
     }
     if (controls.layerChooser) {
-        setupLayerChooser(map, uiConfig.layerChooser);
+        setupLayerChooser(map, uiConfig);
     }
 
     // Setup the side info panel (it's hidden by default)
@@ -152,7 +166,8 @@ function initializeUiComponents(map: maplibregl.Map, config: any) {
 /**
  * Creates and manages the custom layer chooser control.
  */
-function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfig) {
+function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
+    const chooserConfig = uiConfig;
     const controlContainer = document.createElement('div');
     controlContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser';
 
@@ -175,8 +190,7 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
         input.type = 'radio';
         input.name = 'background-layer';
         input.id = `bg-${layer.id}`;
-        input.checked = index === defaultActiveLayerIndex; // First one is active by default
-        map.setLayoutProperty(layer.id, 'visibility', input.checked ? 'visible' : 'none');
+        input.checked = map.getLayoutProperty(layer.id, 'visibility') === 'visible';
 
         input.onchange = () => {
             // Set layer visibility
@@ -277,10 +291,9 @@ function setupLayerChooser(map: maplibregl.Map, chooserConfig: LayerChooserConfi
 function setupFullscreenButton(map: maplibregl.Map) {
     const fullscreenBtn = document.createElement('button');
     fullscreenBtn.className = 'maplibregl-ctrl custom-fullscreen-btn';
-    fullscreenBtn.textContent = 'Full screen';
+    fullscreenBtn.title = 'See larger';
+    fullscreenBtn.innerHTML = '<span style="display:inline-block;width:20px;height:20px;background:url(assets/layers-2x.png) center/20px 20px no-repeat;"></span>';
     fullscreenBtn.onclick = () => window.open(window.location.href, '_blank');
-
-    // Add it to the bottom-right container, next to attribution
     map.getContainer().querySelector('.maplibregl-ctrl-bottom-right')?.appendChild(fullscreenBtn);
 }
 
@@ -293,9 +306,9 @@ function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel'
     panel.id = 'info-panel';
     panel.style.backgroundColor = panelConfig.backgroundColor;
     panel.style.width = panelConfig.width;
-
     const panelHeader = document.createElement('div');
     panelHeader.id = 'info-panel__header';
+
 
     const closeButton = document.createElement('button');
     closeButton.id = 'info-panel__close-btn';
@@ -307,7 +320,6 @@ function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel'
         mapContainer.style.removeProperty('--panel-width');
         map.resize();
     };
-
     panelHeader.appendChild(closeButton);
     panel.appendChild(panelHeader);
 
@@ -329,6 +341,7 @@ function setupInfoPanel(map: maplibregl.Map, panelConfig: CustomUiConfig['panel'
  */
 function setupFeatureInteraction(map: maplibregl.Map, config: any) {
     const clickableLayerIds = getClickableLayerIds(config);
+    let ignoreNextClick = false;
 
     map.on('mousemove', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
@@ -336,9 +349,23 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
     });
 
     map.on('click', (e) => {
+        if (ignoreNextClick) {
+            ignoreNextClick = false;
+            return;
+        }
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
-        if (!features.length) return;
-
+        if (!features.length) {
+            // Clicked outside any feature, close panel if open
+            const panel = document.getElementById('info-panel') as HTMLDivElement;
+            if (panel && panel.style.display === 'block') {
+                panel.style.display = 'none';
+                const mapContainer = map.getContainer();
+                mapContainer.classList.remove('panel-open');
+                mapContainer.style.removeProperty('--panel-width');
+                map.resize();
+            }
+            return;
+        }
         const feature = features[0];
         const properties = feature.properties;
 
@@ -349,6 +376,10 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         let htmlImg = '';
         if (properties.imageUrl) {
             htmlImg += `<img src="${properties.imageUrl}" alt="${properties.title || ''}" style="width: 100%; height: auto; display: block;">`;
+        }
+        // Add copyright below image
+        if (properties.copyright) {
+            htmlImg += `<div class='feature-copyright'>${properties.copyright}</div>`;
         }
         panelContentImg.innerHTML = htmlImg
 
@@ -365,9 +396,24 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         panel.style.display = 'block';
         const mapContainer = map.getContainer();
         mapContainer.classList.add('panel-open');
-        mapContainer.style.setProperty('--panel-width', panel.style.width); // for scss
+        mapContainer.style.setProperty('--panel-width', panel.style.width);
         map.resize();
     });
+
+    // Close panel on map double click (zoom)
+    map.on('dblclick', () => {
+        const panel = document.getElementById('info-panel') as HTMLDivElement;
+        if (panel && panel.style.display === 'block') {
+            panel.style.display = 'none';
+            const mapContainer = map.getContainer();
+            mapContainer.classList.remove('panel-open');
+            mapContainer.style.removeProperty('--panel-width');
+            map.resize();
+        }
+    });
+
+
+
 }
 
 // --- HELPER FUNCTIONS ---
@@ -423,15 +469,14 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
  * Finds layers that are interactive based on GeoJSON properties.
  */
 function getClickableLayerIds(config: any): string[] {
-    const clickableSourceNames: string[] = [];
-    // This is a simplification. A more robust way would be to fetch and inspect GeoJSON.
-    // Here we assume if a layer is in the layerChooser, it might be clickable.
-    // A better check would be to see if its source features have title/description.
-    // For this project, we'll link 'clickability' to being a data layer.
-    config.customUi.layerChooser.dataLayers.forEach((layer: any) => {
-        clickableSourceNames.push(layer.id);
-    });
-    return clickableSourceNames;
+    // Use interactive property from dataLayers
+    const clickableLayerIds: string[] = [];
+    if (config.customUi && Array.isArray(config.customUi.dataLayers)) {
+        config.customUi.dataLayers.forEach((layer: any) => {
+            if (layer.interactive) clickableLayerIds.push(layer.id);
+        });
+    }
+    return clickableLayerIds;
 }
 
 /**

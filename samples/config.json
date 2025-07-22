@@ -1,4 +1,5 @@
 {
+    "title": "Combe d'Ire",
     "version": 8,
     "center": [
         6.224185,
@@ -43,17 +44,26 @@
         {
             "id": "osm-background",
             "type": "raster",
-            "source": "osm-background"
+            "source": "osm-background",
+            "layout": {
+                "visibility": "none"
+            }
         },
         {
             "id": "ign-plan",
             "type": "raster",
-            "source": "ign-plan"
+            "source": "ign-plan",
+            "layout": {
+                "visibility": "visible"
+            }
         },
         {
             "id": "ign-ortho",
             "type": "raster",
-            "source": "ign-ortho"
+            "source": "ign-ortho",
+            "layout": {
+                "visibility": "none"
+            }
         },
         {
             "id": "bike-routes-layer",
@@ -98,33 +108,33 @@
             "fullscreen": true,
             "attribution": true
         },
-        "layerChooser": {
-            "globalMinZoom": 5,
-            "globalMaxZoom": 18,
-            "backgroundLayers": [
-                {
-                    "id": "osm-background",
-                    "name": "Street Map"
-                },
-                {
-                    "id": "ign-plan",
-                    "name": "Plan IGN"
-                },
-                {
-                    "id": "ign-ortho",
-                    "name": "Aerial IGN"
-                }
-            ],
-            "dataLayers": [
-                {
-                    "id": "subway-stations-layer",
-                    "name": "Subway Stations"
-                },
-                {
-                    "id": "bike-routes-layer",
-                    "name": "Bike Routes"
-                }
-            ]
-        }
+        "backgroundLayers": [
+            {
+                "id": "osm-background",
+                "name": "Street Map"
+            },
+            {
+                "id": "ign-plan",
+                "name": "Plan IGN"
+            },
+            {
+                "id": "ign-ortho",
+                "name": "Aerial IGN"
+            }
+        ],
+        "dataLayers": [
+            {
+                "id": "subway-stations-layer",
+                "name": "Subway Stations",
+                "interactive": true
+            },
+            {
+                "id": "bike-routes-layer",
+                "name": "Bike Routes",
+                "interactive": false
+            }
+        ],
+        "globalMinZoom": 5,
+        "globalMaxZoom": 18
     }
 }
