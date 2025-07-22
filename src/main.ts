@@ -135,12 +135,6 @@ function initializeUiComponents(map: maplibregl.Map, config: any) {
 
     const controls = uiConfig.controls;
 
-    // Set page title in info panel header
-    const infoPanelHeader = document.getElementById('info-panel__title');
-    if (infoPanelHeader && config.title) {
-        infoPanelHeader.textContent = config.title;
-    }
-
     if (controls.zoom) {
         map.addControl(new maplibregl.NavigationControl({
             showCompass: false
@@ -376,10 +370,6 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         let htmlImg = '';
         if (properties.imageUrl) {
             htmlImg += `<img src="${properties.imageUrl}" alt="${properties.title || ''}" style="width: 100%; height: auto; display: block;">`;
-        }
-        // Add copyright below image
-        if (properties.copyright) {
-            htmlImg += `<div class='feature-copyright'>${properties.copyright}</div>`;
         }
         panelContentImg.innerHTML = htmlImg
 

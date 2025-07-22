@@ -32,18 +32,6 @@
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    &__title {
-        font-size: 18px;
-        font-weight: bold;
-        margin-right: 10px;
-        flex: 1;
-    }
-
-    &__content-img {
-        padding: 0 20px 0 20px;
-        margin-top: 10px;
-    }
-
     &__content-text {
         padding: 20px;
     }
@@ -78,13 +66,6 @@
     div {
         font-size: 16px;
         line-height: 1.6;
-    }
-
-    .feature-copyright {
-        font-size: 12px;
-        color: #888;
-        margin: 6px 0 0 0;
-        text-align: left;
     }
 }
 
@@ -166,33 +147,4 @@
     &:hover {
         background: #fff;
     }
-}
-
-.maplibregl-ctrl-top-left,
-.maplibregl-ctrl-bottom-left {
-    z-index: 120;
-}
-
-.maplibregl-ctrl-bottom-left {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    z-index: 120;
-}
-
-.maplibregl-ctrl-bottom-right {
-    z-index: 120;
-}
-
-.custom-copyright {
-    position: absolute;
-    left: 10px;
-    bottom: 10px;
-    z-index: 120;
-    font-size: 13px;
-    color: #888;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 2px 8px;
-    border-radius: 4px;
-    pointer-events: none;
 }
