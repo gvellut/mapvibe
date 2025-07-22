@@ -443,6 +443,16 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
     for (const sourceName in sources) {
         const source = sources[sourceName];
         if (source.type === 'geojson' && typeof source.data === 'string') {
+            // Try to get the data directly from the map's source if available
+            const mapSource = map.getSource(sourceName) as maplibregl.GeoJSONSource | undefined;
+            if (mapSource && typeof mapSource.getData === 'function') {
+                const data = mapSource.getData();
+                if (data && typeof data === 'object') {
+                    geojsonFetches.push(Promise.resolve(data));
+                    continue;
+                }
+            }
+            // Fallback: fetch from URL if not present in maplibre
             geojsonFetches.push(fetch(source.data).then(res => res.json()));
         }
     }
@@ -497,6 +507,7 @@ function getClickableLayerIds(config: any): string[] {
  * This should be called after the map's style is loaded.
  */
 async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any) {
+    // TODO check which images are referenced from data in config
     const customImages = config.customImageResources;
     if (!customImages || !Array.isArray(customImages)) {
         return; // No custom images to load
