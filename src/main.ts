@@ -267,6 +267,13 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
     button.addEventListener('click', (e) => {
         e.stopPropagation();
         panel.classList.toggle('visible');
+        // When opening the layer chooser, close the info panel if open
+        if (panel.classList.contains('visible')) {
+            const infoPanel = document.getElementById('info-panel') as HTMLDivElement;
+            if (infoPanel && infoPanel.style.display === 'block') {
+                infoPanel.style.display = 'none';
+            }
+        }
     });
 
     // Close panel on outside click
@@ -277,6 +284,14 @@ function setupLayerChooser(map: maplibregl.Map, uiConfig: CustomUiConfig) {
     });
 
     map.getContainer().querySelector('.maplibregl-ctrl-top-right')?.appendChild(controlContainer);
+
+    // Helper to close the layer chooser panel if open
+    function closeLayerChooserPanel() {
+        panel.classList.remove('visible');
+    }
+
+    // Expose for use in other functions
+    (map as any)._closeLayerChooserPanel = closeLayerChooserPanel;
 }
 
 /**
@@ -334,12 +349,20 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
     const clickableLayerIds = getClickableLayerIds(config);
     let ignoreNextClick = false;
 
+    // Helper to close layer chooser if open
+    function closeLayerChooserIfOpen() {
+        if ((map as any)._closeLayerChooserPanel) {
+            (map as any)._closeLayerChooserPanel();
+        }
+    }
+
     map.on('mousemove', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
         map.getCanvas().style.cursor = features.length ? 'pointer' : '';
     });
 
     map.on('click', (e) => {
+        closeLayerChooserIfOpen(); // Close layer chooser on map click
         if (ignoreNextClick) {
             ignoreNextClick = false;
             return;
@@ -383,6 +406,7 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
 
     // Close panel on map double click (zoom)
     map.on('dblclick', () => {
+        closeLayerChooserIfOpen(); // Close layer chooser on double click
         const panel = document.getElementById('info-panel') as HTMLDivElement;
         if (panel && panel.style.display === 'block') {
             panel.style.display = 'none';
@@ -390,7 +414,10 @@ function setupFeatureInteraction(map: maplibregl.Map, config: any) {
         }
     });
 
-
+    // Close layer chooser on drag (pan)
+    map.on('dragstart', () => {
+        closeLayerChooserIfOpen();
+    });
 
 }
 
