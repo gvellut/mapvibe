@@ -94,6 +94,26 @@
             "id": "peak",
             "url": "assets/markers/mountain.png",
             "pixelRatio": 2
+        },
+        {
+            "id": "start",
+            "url": "assets/markers/start.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "end",
+            "url": "assets/markers/end.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "hiking",
+            "url": "assets/markers/hiking.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "camera",
+            "url": "assets/markers/camera.png",
+            "pixelRatio": 2
         }
     ],
     "customUi": {
