@@ -92,7 +92,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-image: url('assets/ui-icons/layers.png');
+        background-image: url('/assets/ui-icons/layers.png');
         background-size: 20px 20px;
         background-position: center;
         background-repeat: no-repeat;
@@ -140,9 +140,6 @@
     }
 }
 
-/* 
-  CUSTOM FULLSCREEN CONTROL
-*/
 .maplibregl-ctrl-top-left {
     display: flex;
     flex-direction: column;
@@ -151,10 +148,10 @@
     .maplibregl-ctrl.custom-fullscreen-btn {
         align-self: center; // Center horizontally within the parent
         margin-top: 12px; // Space below the previous control group
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         padding: 0;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 1.0);
         border: none;
         cursor: pointer;
 
@@ -169,30 +166,4 @@
             background: url(assets/ui-icons/fullscreen.png) center center / 24px 24px no-repeat;
         }
     }
-}
-
-/* 
-  ATTRIBUTION CONTROL FONT STYLING
-*/
-.maplibregl-ctrl-attrib {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-}
-
-.maplibregl-ctrl-attrib-inner {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-}
-
-/* 
-  SCALE CONTROL FONT STYLING
-*/
-.maplibregl-ctrl-scale {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-    background-color: rgba(255, 255, 255, 0.8);
-    border: 2px solid #333;
-    border-top: none;
-    color: #333;
-    padding: 0 5px;
-    font-size: 11px;
-    line-height: 1.2;
-    margin: 0;
 }

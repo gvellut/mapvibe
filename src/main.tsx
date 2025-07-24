@@ -149,6 +149,16 @@ const MapVibeApp: React.FC = () => {
             map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
         }
 
+        // Add fullscreen button if enabled
+        if (config.customUi?.controls?.fullscreen) {
+            const fullscreenBtn = document.createElement('button');
+            fullscreenBtn.className = 'maplibregl-ctrl  custom-fullscreen-btn';
+            fullscreenBtn.title = 'See larger';
+            fullscreenBtn.innerHTML = '<span></span>';
+            fullscreenBtn.onclick = () => window.open(window.location.href, '_blank');
+            map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
+        }
+
         // Set pointer cursor for interactive layers
         const clickableLayerIds = getClickableLayerIds(config);
         map.on('mousemove', (e) => {
@@ -286,24 +296,6 @@ const MapVibeApp: React.FC = () => {
                     setLayerChooserVisible(false);
                 }}
             />
-
-            {/* Fullscreen Button */}
-            {config.customUi?.controls?.fullscreen && (
-                <div style={{
-                    position: 'absolute',
-                    top: config.customUi?.controls?.zoom ? '80px' : '10px',
-                    left: '10px',
-                    zIndex: 1000
-                }}>
-                    <button
-                        className="maplibregl-ctrl custom-fullscreen-btn"
-                        title="See larger"
-                        onClick={() => window.open(window.location.href, '_blank')}
-                    >
-                        <span></span>
-                    </button>
-                </div>
-            )}
 
             {/* Controls */}
             {config.customUi?.controls && (
