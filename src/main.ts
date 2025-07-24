@@ -5,8 +5,6 @@ import './style.scss';
 interface BackgroundLayerConfig {
     id: string;
     name: string;
-    minZoom?: number;
-    maxZoom?: number;
 }
 
 interface DataLayerConfig {
@@ -166,8 +164,10 @@ function setupLayerChooser(map: maplibregl.Map, config: any) {
 
             // Find the corresponding layer definition in config.layers
             const mapLayer = findLayerWithId(layer.id, config);
-            const minZoom = (typeof mapLayer.minzoom === 'number' ? mapLayer.minzoom : chooserConfig.globalMinZoom);
-            const maxZoom = (typeof mapLayer.maxzoom === 'number' ? mapLayer.maxzoom : chooserConfig.globalMaxZoom);
+            // Find the corresponding source definition in config.sources
+            const sourceName = mapLayer.source;
+            const sourceDef = config.sources && config.sources[sourceName] ? config.sources[sourceName] : {};
+            const { minZoom, maxZoom } = getClampedZoomBounds(sourceDef, chooserConfig);
             const currentZoom = map.getZoom();
 
             // Enforce the new zoom boundaries on the map instance.
@@ -196,8 +196,9 @@ function setupLayerChooser(map: maplibregl.Map, config: any) {
     let defaultBackgroundLayer = visibleBackgroundLayer(map, chooserConfig);
     if (defaultBackgroundLayer) {
         const mapLayer = findLayerWithId(defaultBackgroundLayer.id, config);
-        const minZoom = (typeof mapLayer.minzoom === 'number' ? mapLayer.minzoom : chooserConfig.globalMinZoom);
-        const maxZoom = (typeof mapLayer.maxzoom === 'number' ? mapLayer.maxzoom : chooserConfig.globalMaxZoom);
+        const sourceName = mapLayer.source;
+        const sourceDef = config.sources && config.sources[sourceName] ? config.sources[sourceName] : {};
+        const { minZoom, maxZoom } = getClampedZoomBounds(sourceDef, chooserConfig);
         map.setMinZoom(minZoom ?? null);
         map.setMaxZoom(maxZoom ?? null);
     }
@@ -497,6 +498,18 @@ async function loadCustomImageOnDemand(map: maplibregl.Map, config: any, imageId
     } catch (error) {
         console.error(`Error loading image ${imageId} from ${imageInfo.url}:`, error);
     }
+}
+
+function getClampedZoomBounds(sourceDef: any, chooserConfig: CustomUiConfig) {
+    let minZoom = (typeof sourceDef.minzoom === 'number' ? sourceDef.minzoom : chooserConfig.globalMinZoom);
+    let maxZoom = (typeof sourceDef.maxzoom === 'number' ? sourceDef.maxzoom : chooserConfig.globalMaxZoom);
+    if (typeof chooserConfig.globalMinZoom === 'number') {
+        minZoom = Math.max(minZoom ?? chooserConfig.globalMinZoom, chooserConfig.globalMinZoom);
+    }
+    if (typeof chooserConfig.globalMaxZoom === 'number') {
+        maxZoom = Math.min(maxZoom ?? chooserConfig.globalMaxZoom, chooserConfig.globalMaxZoom);
+    }
+    return { minZoom, maxZoom };
 }
 
 // --- START THE APP ---

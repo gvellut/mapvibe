@@ -31,6 +31,15 @@
             "tileSize": 256,
             "attribution": "© IGN"
         },
+        "open-topo-map": {
+            "type": "raster",
+            "tiles": [
+                "https://a.tile.opentopomap.org/{z}/{x}/{y}.png"
+            ],
+            "tileSize": 256,
+            "attribution": "© OpenStreetMap contributors © OpenTopoMap",
+            "maxzoom": 16
+        },
         "subway-stations": {
             "type": "geojson",
             "data": "samples/data/subway-stations.geojson"
@@ -61,6 +70,14 @@
             "id": "ign-ortho",
             "type": "raster",
             "source": "ign-ortho",
+            "layout": {
+                "visibility": "none"
+            }
+        },
+        {
+            "id": "open-topo-map",
+            "type": "raster",
+            "source": "open-topo-map",
             "layout": {
                 "visibility": "none"
             }
@@ -140,6 +157,10 @@
             {
                 "id": "ign-ortho",
                 "name": "Aerial IGN"
+            },
+            {
+                "id": "open-topo-map",
+                "name": "OpenTopoMap"
             }
         ],
         "dataLayers": [
