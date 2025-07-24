@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import Map from 'react-map-gl/maplibre';
-import maplibregl, { LngLatBounds } from 'maplibre-gl';
+import { Map } from 'react-map-gl/maplibre';
+import maplibregl, { LngLatBounds, MapLibreEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.scss';
 
@@ -120,6 +120,31 @@ const MapVibeApp: React.FC = () => {
         initializeApp();
     }, []);
 
+    // // Register styleimagemissing event outside onMapLoad
+    // useEffect(() => {
+    //     if (!map.current || !config) return;
+
+    //     const handler = async (e: any) => {
+    //         console.log("asasd");
+    //         //await loadCustomImageOnDemand(map.current, config, e.id);
+    //     };
+    //     map.current.on('styleimagemissing', handler);
+
+    //     return () => {
+    //         map.current?.off('styleimagemissing', handler);
+    //     };
+    // }, [config, map]);
+
+    const setIconMissingHandler = useCallback(async (event: MapLibreEvent) => {
+        const map = event.target;
+        if (!map || !config) return;
+        const handler = async (e: any) => {
+            await loadCustomImageOnDemand(map, config, e.id);
+        };
+        map.on('styleimagemissing', handler);
+
+    }, [config]);
+
     // Handle map load
     const onMapLoad = useCallback(async () => {
         const map = mapRef.current?.getMap();
@@ -165,25 +190,6 @@ const MapVibeApp: React.FC = () => {
             const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
             map.getCanvas().style.cursor = features.length ? 'pointer' : '';
         });
-
-        // Handle style image missing
-        map.on('styleimagemissing', async (e) => {
-            await loadCustomImageOnDemand(map, config, e.id);
-        });
-
-        // Load custom images
-        if (config.customImageResources) {
-            for (const imageInfo of config.customImageResources) {
-                try {
-                    if (!map.hasImage(imageInfo.id)) {
-                        const image = await map.loadImage(imageInfo.url);
-                        map.addImage(imageInfo.id, image.data, { pixelRatio: imageInfo.pixelRatio || 1 });
-                    }
-                } catch (error) {
-                    console.error(`Error loading image ${imageInfo.id}:`, error);
-                }
-            }
-        }
 
         // Fit to bounds if no center/zoom specified
         if (!config.center && !config.zoom && config.sources) {
@@ -294,6 +300,9 @@ const MapVibeApp: React.FC = () => {
                 onDblClick={() => {
                     setInfoPanelVisible(false);
                     setLayerChooserVisible(false);
+                }}
+                onStyleData={(event) => {
+                    setIconMissingHandler(event)
                 }}
             />
 
