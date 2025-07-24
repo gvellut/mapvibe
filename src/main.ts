@@ -56,72 +56,20 @@ async function initializeApp() {
             document.title = config.title;
         }
 
-        // --- THE PLACEHOLDER STRATEGY ---
-        // This prevents the map from trying to load icons before we've added them.
-        // warning in console :
-        // "peak" could not be loaded. Please make sure you have added the image with map.addImage() or a "sprite" property in your style.
-        // You can provide missing images by listening for the "styleimagemissing" map event.
-        // although it does not cause error
-
-        // 1. PREPARE THE CONFIG
-        // Collect all icon-image ids used in layers BEFORE replacing with placeholder
-        const iconImageIds = new Set<string>();
-        if (Array.isArray(config.layers)) {
-            config.layers.forEach((layer: any) => {
-                const iconId = layer.layout?.['icon-image'];
-                if (typeof iconId === 'string') {
-                    iconImageIds.add(iconId);
-                }
-            });
-        }
-
-        const PLACEHOLDER_ID = 'placeholder-icon-sync';
-        // This will store the original icon for each layer we modify.
-        const originalLayerIcons = new Map<string, string>();
-        // Get the set of all icon IDs we need to manage.
-        const customImageIds = new Set((config.customImageResources || []).map((img: any) => img.id));
-
-        // Loop through layers IN MEMORY and temporarily replace custom icons.
-        for (const layer of config.layers) {
-            const iconImage = layer.layout?.['icon-image'];
-            if (iconImage && customImageIds.has(iconImage)) {
-                originalLayerIcons.set(layer.id, iconImage); // Save original icon
-                layer.layout['icon-image'] = PLACEHOLDER_ID; // Set placeholder
-            }
-        }
-
-        // 2. CREATE THE MAP with the modified config.
-        // All sources and layers will load, but pointing to a safe placeholder.
+        // Create the map with the original config.
         const map = new maplibregl.Map({
             container: 'map',
-            style: config, // Use the MODIFIED config
+            style: config,
             attributionControl: false
         });
 
-        // 3. ADD THE PLACEHOLDER IMAGE IMMEDIATELY AND SYNCHRONOUSLY
-        // This is the key to preventing the error. It happens right after map creation,
-        // before the first render can fail. We add a single 1x1 transparent pixel.
-        map.addImage(PLACEHOLDER_ID, {
-            width: 1,
-            height: 1,
-            data: new Uint8Array(4) // A single transparent RGBA pixel
+        // Dynamically load images when the style requests them.
+        map.on('styleimagemissing', async (e) => {
+            await loadCustomImageOnDemand(map, config, e.id);
         });
 
-        // 4. START LOADING THE REAL IMAGES IN THE BACKGROUND
-        // Now that the map exists, we can call our function. This returns a promise.
-        const imagesLoadedPromise = loadCustomImagesFromConfig(map, config, iconImageIds);
-
-        // 5. ONCE THE MAP STYLE IS LOADED, SWAP THE ICONS BACK
+        // Once the map style is loaded, run the rest of the setup.
         map.on('load', async () => {
-            // Wait for the background image loading to complete.
-            await imagesLoadedPromise;
-
-            // Now that the real images are in the map's registry, swap the icons back.
-            for (const [layerId, originalIconId] of originalLayerIcons.entries()) {
-                map.setLayoutProperty(layerId, 'icon-image', originalIconId);
-            }
-
-            // Finally, with the map fully and correctly rendered, run the rest of the setup.
             if (!config.center && !config.zoom) {
                 await fitMapToBounds(map, config.sources);
             }
@@ -521,36 +469,34 @@ function getClickableLayerIds(config: any): string[] {
 }
 
 /**
- * Reads image definitions from the config, loads them, and adds them to the map.
- * This should be called after the map's style is loaded.
+ * Loads a custom image on demand when requested by the map style.
  */
-async function loadCustomImagesFromConfig(map: maplibregl.Map, config: any, iconImageIds: Set<string>) {
+async function loadCustomImageOnDemand(map: maplibregl.Map, config: any, imageId: string) {
     const customImages = config.customImageResources;
     if (!customImages || !Array.isArray(customImages)) {
-        return; // No custom images to load
+        return;
     }
 
-    const imageLoadPromises: Promise<void>[] = [];
-
-    for (const imageInfo of customImages) {
-        if (!imageInfo.id || !imageInfo.url) continue;
-        if (!iconImageIds.has(imageInfo.id)) continue; // Only load if used in layers
-
-        const promise = (async () => {
-            try {
-                const image = await map.loadImage(imageInfo.url);
-                if (!map.hasImage(imageInfo.id)) {
-                    map.addImage(imageInfo.id, image.data, { pixelRatio: imageInfo.pixelRatio || 1 });
-                }
-            } catch (error) {
-                console.error(`Error loading image ${imageInfo.id} from ${imageInfo.url}:`, error);
-            }
-        })();
-        imageLoadPromises.push(promise);
+    const imageInfo = customImages.find((img: any) => img.id === imageId);
+    if (!imageInfo || !imageInfo.url) {
+        console.warn(`Image info for "${imageId}" not found in config.customImageResources.`);
+        return;
     }
 
-    // Wait for all images to be loaded and added before proceeding
-    await Promise.all(imageLoadPromises);
+    // Don't try to load the same image more than once.
+    if (map.hasImage(imageId)) {
+        return;
+    }
+
+    try {
+        const image = await map.loadImage(imageInfo.url);
+        if (map.hasImage(imageId)) {
+            return;
+        }
+        map.addImage(imageId, image.data, { pixelRatio: imageInfo.pixelRatio || 1 });
+    } catch (error) {
+        console.error(`Error loading image ${imageId} from ${imageInfo.url}:`, error);
+    }
 }
 
 // --- START THE APP ---
