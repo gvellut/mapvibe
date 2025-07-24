@@ -13,7 +13,8 @@
                 "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
             ],
             "tileSize": 256,
-            "attribution": "© OpenStreetMap contributors"
+            "attribution": "© OpenStreetMap contributors",
+            "maxzoom": 18
         },
         "ign-plan": {
             "type": "raster",
@@ -21,7 +22,8 @@
                 "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
             ],
             "tileSize": 256,
-            "attribution": "© IGN"
+            "attribution": "© IGN",
+            "maxzoom": 18
         },
         "ign-ortho": {
             "type": "raster",

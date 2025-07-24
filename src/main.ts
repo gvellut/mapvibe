@@ -54,12 +54,14 @@ async function initializeApp() {
             document.title = config.title;
         }
 
-        // Create the map with the original config.
-        const map = new maplibregl.Map({
+        let mapInit: maplibregl.MapOptions = {
             container: 'map',
             style: config,
-            attributionControl: false
-        });
+            attributionControl: false,
+        };
+
+        // Create the map with the original config.
+        const map = new maplibregl.Map(mapInit);
 
         // Dynamically load images when the style requests them.
         map.on('styleimagemissing', async (e) => {
