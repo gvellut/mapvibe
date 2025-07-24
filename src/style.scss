@@ -84,6 +84,8 @@
   LAYER CHOOSER STYLES
 */
 .maplibregl-ctrl-group.custom-layer-chooser {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
     .layer-chooser-btn {
         width: 30px;
         height: 30px;
@@ -106,6 +108,7 @@
         border-radius: 4px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         width: 220px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
         &.visible {
             display: block;
@@ -117,6 +120,7 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
             margin-bottom: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         div {
@@ -126,6 +130,11 @@
         label {
             font-size: 15px;
             margin-left: 5px;
+            cursor: pointer;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        input {
             cursor: pointer;
         }
     }
@@ -160,4 +169,30 @@
             background: url(assets/ui-icons/fullscreen.png) center center / 24px 24px no-repeat;
         }
     }
+}
+
+/* 
+  ATTRIBUTION CONTROL FONT STYLING
+*/
+.maplibregl-ctrl-attrib {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.maplibregl-ctrl-attrib-inner {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* 
+  SCALE CONTROL FONT STYLING
+*/
+.maplibregl-ctrl-scale {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 2px solid #333;
+    border-top: none;
+    color: #333;
+    padding: 0 5px;
+    font-size: 11px;
+    line-height: 1.2;
+    margin: 0;
 }
