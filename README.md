@@ -1,18 +1,22 @@
-# MapVibe: Embeddable Map Interface
+# MapVibe
 
-A static, client-side map application for embedding interactive maps in blog posts or websites (similar to Google My Maps). Uses [MapLibre GL JS](https://maplibre.org/) and a single JSON config file for all map setup.
+A static map interface for embedding in blog posts or websites, as a Google My Maps replacement. Runs fully client-side, loads configuration from a single JSON file.
 
 ## Configuration
 
-- The config file follows the [MapLibre Style Spec](https://maplibre.org/maplibre-gl-js-docs/style-spec/) with an extra `customUi` object.
-- `customUi.backgroundLayers` defines which raster layers can be toggled as backgrounds (only one visible at a time; others must have `layout.visibility: none`).
-- Other layers (lines, points, polygons) use standard MapLibre definitions.
-- UI controls, panel color/width, and layer chooser are set in `customUi`.
+- Uses the [MapLibre Style Spec](https://maplibre.org/maplibre-gl-js-docs/style-spec/) for sources, layers, and styling.
+- The config file must include a `customUi` object:
+  - `customUi.backgroundLayers`: List of raster layers that can be toggled as backgrounds.
+  - `customUi.dataLayers`: List of data layers (lines, points, polygons) for toggling visibility.
+  - `customUi.panel`: Panel color and width.
+  - `customUi.controls`: Which UI controls to show (zoom, scale, layer chooser, fullscreen, attribution).
+  - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
+- Only one background layer should be visible at a time (including load time ie with `layout.visibility: visible`). Other layers follow standard MapLibre definitions.
 
 ## Usage
 
 - Host the `/dist` output and your config file on your server.
-- Embed with an `<iframe src=".../index.html?config=.../config.json" ...>` in your page.
+- Embed with `<iframe src=".../index.html?config=.../config.json" ...>`.
 
 ## Development
 
@@ -27,7 +31,8 @@ npm run dev
 npm run build
 ```
 
-Outputs static files to `/dist` for deployment.
+Outputs static files to `/dist`.
 
 ## License
+
 MIT
