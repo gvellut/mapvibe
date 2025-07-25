@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Map } from 'react-map-gl/maplibre';
-import maplibregl, { LngLatBounds, MapLibreEvent } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import './style.scss';
+
 
 // --- TYPE DEFINITIONS for custom config properties ---
 interface BackgroundLayerConfig {
@@ -55,9 +54,82 @@ interface InfoPanelData {
     imageUrl?: string;
 }
 
+// Map Component Props
+interface MapProps {
+    mapStyle: any;
+    initialViewState: {
+        longitude: number;
+        latitude: number;
+        zoom: number;
+    };
+    style: React.CSSProperties;
+    attributionControl?: boolean;
+    onLoad?: () => void;
+    onClick?: (e: maplibregl.MapMouseEvent) => void;
+    onDrag?: () => void;
+    onDblClick?: () => void;
+    onStyleImageMissing?: (e: any) => void;
+}
+
+// Custom Map Component
+const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
+    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing }, ref) => {
+        const mapContainer = useRef<HTMLDivElement>(null);
+        const mapInstance = useRef<maplibregl.Map | null>(null);
+
+        React.useImperativeHandle(ref, () => ({
+            getMap: () => mapInstance.current
+        }));
+
+        useEffect(() => {
+            if (!mapContainer.current) return;
+
+            // Create map instance
+            mapInstance.current = new maplibregl.Map({
+                container: mapContainer.current,
+                style: mapStyle,
+                center: [initialViewState.longitude, initialViewState.latitude],
+                zoom: initialViewState.zoom,
+                attributionControl: attributionControl ? {} : false
+            });
+
+            const map = mapInstance.current;
+
+            // Set up event handlers
+            if (onLoad) {
+                map.on('load', onLoad);
+            }
+
+            if (onClick) {
+                map.on('click', onClick);
+            }
+
+            if (onDrag) {
+                map.on('drag', onDrag);
+            }
+
+            if (onDblClick) {
+                map.on('dblclick', onDblClick);
+            }
+
+            if (onStyleImageMissing) {
+                map.on('styleimagemissing', onStyleImageMissing);
+            }
+
+            return () => {
+                map.remove();
+            };
+        }, []);
+
+        return <div ref={mapContainer} style={style} />;
+    }
+);
+
+Map.displayName = 'Map';
+
 // --- REACT COMPONENTS ---
 const MapVibeApp: React.FC = () => {
-    const mapRef = useRef<any>(null);
+    const mapRef = useRef<{ getMap: () => maplibregl.Map | null }>(null);
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
@@ -120,29 +192,11 @@ const MapVibeApp: React.FC = () => {
         initializeApp();
     }, []);
 
-    // // Register styleimagemissing event outside onMapLoad
-    // useEffect(() => {
-    //     if (!map.current || !config) return;
-
-    //     const handler = async (e: any) => {
-    //         console.log("asasd");
-    //         //await loadCustomImageOnDemand(map.current, config, e.id);
-    //     };
-    //     map.current.on('styleimagemissing', handler);
-
-    //     return () => {
-    //         map.current?.off('styleimagemissing', handler);
-    //     };
-    // }, [config, map]);
-
-    const setIconMissingHandler = useCallback(async (event: MapLibreEvent) => {
-        const map = event.target;
+    // Handle styleimagemissing event
+    const handleStyleImageMissing = useCallback(async (e: any) => {
+        const map = mapRef.current?.getMap();
         if (!map || !config) return;
-        const handler = async (e: any) => {
-            await loadCustomImageOnDemand(map, config, e.id);
-        };
-        map.on('styleimagemissing', handler);
-
+        await loadCustomImageOnDemand(map, config, e.id);
     }, [config]);
 
     // Handle map load
@@ -198,7 +252,7 @@ const MapVibeApp: React.FC = () => {
     }, [config, selectedBackgroundLayer]);
 
     // Handle map click
-    const onMapClick = useCallback((e: any) => {
+    const onMapClick = useCallback((e: maplibregl.MapMouseEvent) => {
         const map = mapRef.current?.getMap();
         if (!map || !config) return;
 
@@ -301,9 +355,7 @@ const MapVibeApp: React.FC = () => {
                     setInfoPanelVisible(false);
                     setLayerChooserVisible(false);
                 }}
-                onStyleData={(event) => {
-                    setIconMissingHandler(event)
-                }}
+                onStyleImageMissing={handleStyleImageMissing}
             />
 
             {/* Controls */}
