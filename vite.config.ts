@@ -7,4 +7,5 @@ export default defineConfig({
     //     // We provide the path with the required query parameter.
     //     open: '/?config=samples/config.json'
     // }
+    base: '/mapvibe/', // Use relative paths instead of absolute paths
 });
