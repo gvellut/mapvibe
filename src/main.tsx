@@ -13,6 +13,7 @@ interface BackgroundLayerConfig {
 interface DataLayerConfig {
     id: string;
     name: string;
+    layerIds: string[];
     interactive?: boolean;
 }
 
@@ -175,10 +176,14 @@ const MapVibeApp: React.FC = () => {
 
                 if (config.customUi?.dataLayers) {
                     const visibleData = new Set<string>();
-                    config.customUi.dataLayers.forEach((layer: DataLayerConfig) => {
-                        const layerDef = config.layers?.find((l: any) => l.id === layer.id);
-                        if (layerDef && layerDef.layout?.visibility !== 'none') {
-                            visibleData.add(layer.id);
+                    config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
+                        // Check if any of the referenced layers are visible
+                        const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
+                            const layerDef = config.layers?.find((l: any) => l.id === layerId);
+                            return layerDef && layerDef.layout?.visibility !== 'none';
+                        });
+                        if (hasVisibleLayers) {
+                            visibleData.add(dataLayer.id);
                         }
                     });
                     setVisibleDataLayers(visibleData);
@@ -309,20 +314,27 @@ const MapVibeApp: React.FC = () => {
     }, [config]);
 
     // Handle data layer toggle
-    const handleDataLayerToggle = useCallback((layerId: string, visible: boolean) => {
+    const handleDataLayerToggle = useCallback((dataLayerId: string, visible: boolean) => {
         const map = mapRef.current?.getMap();
-        if (!map) return;
+        if (!map || !config) return;
 
         const newVisibleLayers = new Set(visibleDataLayers);
         if (visible) {
-            newVisibleLayers.add(layerId);
+            newVisibleLayers.add(dataLayerId);
         } else {
-            newVisibleLayers.delete(layerId);
+            newVisibleLayers.delete(dataLayerId);
         }
         setVisibleDataLayers(newVisibleLayers);
 
-        map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
-    }, [visibleDataLayers]);
+        // Find the data layer config to get the layerIds
+        const dataLayer = config.customUi.dataLayers.find((layer: DataLayerConfig) => layer.id === dataLayerId);
+        if (dataLayer) {
+            // Toggle visibility for all layers referenced in layerIds
+            dataLayer.layerIds.forEach(layerId => {
+                map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+            });
+        }
+    }, [visibleDataLayers, config]);
 
     if (error) {
         return (
@@ -551,14 +563,16 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
 }
 
 /**
- * Finds layers that are interactive based on GeoJSON properties.
+ * Finds layers that are interactive based on dataLayers configuration.
  */
 function getClickableLayerIds(config: AppConfig): string[] {
-    // Use interactive property from dataLayers
     const clickableLayerIds: string[] = [];
     if (config.customUi && Array.isArray(config.customUi.dataLayers)) {
-        config.customUi.dataLayers.forEach((layer: any) => {
-            if (layer.interactive) clickableLayerIds.push(layer.id);
+        config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
+            if (dataLayer.interactive) {
+                // Add all layerIds from this interactive data layer
+                clickableLayerIds.push(...dataLayer.layerIds);
+            }
         });
     }
     return clickableLayerIds;

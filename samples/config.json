@@ -46,6 +46,10 @@
             "type": "geojson",
             "data": "samples/data/subway-stations.geojson"
         },
+        "subway-stations2": {
+            "type": "geojson",
+            "data": "samples/data/subway-stations2.geojson"
+        },
         "bike-routes": {
             "type": "geojson",
             "data": "samples/data/bike-routes.geojson"
@@ -102,6 +106,17 @@
             "source": "subway-stations",
             "layout": {
                 "icon-image": "peak",
+                "icon-size": 0.8,
+                "icon-allow-overlap": true,
+                "visibility": "visible"
+            }
+        },
+        {
+            "id": "subway-stations-layer2",
+            "type": "symbol",
+            "source": "subway-stations2",
+            "layout": {
+                "icon-image": "camera",
                 "icon-size": 0.8,
                 "icon-allow-overlap": true,
                 "visibility": "visible"
@@ -167,12 +182,19 @@
         ],
         "dataLayers": [
             {
-                "id": "subway-stations-layer",
+                "id": "poi",
+                "layerIds": [
+                    "subway-stations-layer",
+                    "subway-stations-layer2"
+                ],
                 "name": "Subway Stations",
                 "interactive": true
             },
             {
-                "id": "bike-routes-layer",
+                "id": "path",
+                "layerIds": [
+                    "bike-routes-layer"
+                ],
                 "name": "Bike Routes",
                 "interactive": false
             }
