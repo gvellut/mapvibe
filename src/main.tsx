@@ -378,7 +378,10 @@ const MapVibeApp: React.FC = () => {
                         <LayerChooser
                             config={config}
                             visible={layerChooserVisible}
-                            onToggle={() => setLayerChooserVisible(!layerChooserVisible)}
+                            onToggle={() => {
+                                setLayerChooserVisible(!layerChooserVisible);
+                                setInfoPanelVisible(false);
+                            }}
                             selectedBackgroundLayer={selectedBackgroundLayer}
                             visibleDataLayers={visibleDataLayers}
                             onBackgroundLayerChange={handleBackgroundLayerChange}

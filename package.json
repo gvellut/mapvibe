@@ -7,7 +7,7 @@
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
-        "copy-dist": "dotenv -e .env -- sh -c 'rsync -av --delete --exclude=favicon.png dist/ $BLOG_STATIC_FOLDER'"
+        "copy-dist": "dotenv -e .env -- sh -c 'rsync -av --delete dist/ $BLOG_STATIC_FOLDER'"
     },
     "devDependencies": {
         "@types/react": "^19.1.8",

@@ -1,11 +1,6 @@
 {
-    "title": "Combe d'Ire",
+    "title": "Hike to Pointe Noire de Pormenaz",
     "version": 8,
-    "center": [
-        6.224185,
-        45.728743
-    ],
-    "zoom": 12,
     "sources": {
         "osm-background": {
             "type": "raster",
@@ -42,17 +37,13 @@
             "attribution": "© OpenStreetMap contributors © OpenTopoMap",
             "maxzoom": 16
         },
-        "subway-stations": {
+        "path": {
             "type": "geojson",
-            "data": "samples/data/subway-stations.geojson"
+            "data": "/mapvibe/samples/sample2/path.geojson"
         },
-        "subway-stations2": {
+        "poi": {
             "type": "geojson",
-            "data": "samples/data/subway-stations2.geojson"
-        },
-        "bike-routes": {
-            "type": "geojson",
-            "data": "samples/data/bike-routes.geojson"
+            "data": "/mapvibe/samples/sample2/poi.geojson"
         }
     },
     "layers": [
@@ -89,38 +80,39 @@
             }
         },
         {
-            "id": "bike-routes-layer",
             "type": "line",
-            "source": "bike-routes",
+            "source": "path",
             "paint": {
-                "line-color": "#088",
-                "line-width": 3
+                "line-color": "#ff0000"
             },
             "layout": {
                 "visibility": "visible"
-            }
+            },
+            "id": "path",
+            "filter": [
+                "==",
+                [
+                    "get",
+                    "category"
+                ],
+                "path"
+            ]
         },
         {
-            "id": "subway-stations-layer",
             "type": "symbol",
-            "source": "subway-stations",
+            "source": "poi",
             "layout": {
-                "icon-image": "peak",
-                "icon-size": 0.8,
-                "icon-allow-overlap": true,
-                "visibility": "visible"
-            }
-        },
-        {
-            "id": "subway-stations-layer2",
-            "type": "symbol",
-            "source": "subway-stations2",
-            "layout": {
-                "icon-image": "camera",
-                "icon-size": 0.8,
-                "icon-allow-overlap": true,
-                "visibility": "visible"
-            }
+                "icon-image": "start"
+            },
+            "id": "start",
+            "filter": [
+                "==",
+                [
+                    "get",
+                    "category"
+                ],
+                "start"
+            ]
         }
     ],
     "customImageResources": [
@@ -182,21 +174,20 @@
         ],
         "dataLayers": [
             {
-                "id": "poi",
-                "layerIds": [
-                    "subway-stations-layer",
-                    "subway-stations-layer2"
-                ],
-                "name": "Subway Stations",
-                "interactive": true
-            },
-            {
                 "id": "path",
                 "layerIds": [
-                    "bike-routes-layer"
+                    "path"
                 ],
-                "name": "Bike Routes",
+                "name": "Path",
                 "interactive": false
+            },
+            {
+                "id": "poi",
+                "layerIds": [
+                    "start"
+                ],
+                "name": "POI",
+                "interactive": true
             }
         ],
         "globalMinZoom": 5,
