@@ -483,7 +483,7 @@ const InfoPanel: React.FC<{
                 <button
                     id="info-panel__close-btn"
                     onClick={onClose}
-                    style={{ float: 'right', margin: '10px' }}
+                    style={{ float: 'right', margin: '5px' }}
                 >
                     ✕
                 </button>
