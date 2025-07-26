@@ -39,6 +39,7 @@ interface AppConfig {
     title?: string;
     center?: [number, number];
     zoom?: number;
+    bounds?: [number, number, number, number];
     sources?: any;
     layers?: any[];
     customUi: CustomUiConfig;
@@ -59,9 +60,9 @@ interface InfoPanelData {
 interface MapProps {
     mapStyle: any;
     initialViewState: {
-        longitude: number;
-        latitude: number;
-        zoom: number;
+        center?: [number, number];
+        zoom?: number;
+        bounds?: [number, number, number, number];
     };
     style: React.CSSProperties;
     attributionControl?: boolean;
@@ -89,8 +90,9 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
             mapInstance.current = new maplibregl.Map({
                 container: mapContainer.current,
                 style: mapStyle,
-                center: [initialViewState.longitude, initialViewState.latitude],
+                center: initialViewState.center,
                 zoom: initialViewState.zoom,
+                bounds: initialViewState.bounds,
                 attributionControl: attributionControl ? {} : false
             });
 
@@ -250,8 +252,8 @@ const MapVibeApp: React.FC = () => {
             map.getCanvas().style.cursor = features.length ? 'pointer' : '';
         });
 
-        // Fit to bounds if no center/zoom specified
-        if (!config.center && !config.zoom && config.sources) {
+        // Fit to bounds if no center/zoom specified or bounds
+        if ((!(config.center && config.zoom) && !config.bounds) && config.sources) {
             await fitMapToBounds(map, config.sources);
         }
     }, [config, selectedBackgroundLayer]);
@@ -354,9 +356,9 @@ const MapVibeApp: React.FC = () => {
                 ref={mapRef}
                 mapStyle={config as any}
                 initialViewState={{
-                    longitude: config.center?.[0] || 0,
-                    latitude: config.center?.[1] || 0,
-                    zoom: config.zoom || 1
+                    center: config.center,
+                    zoom: config.zoom,
+                    bounds: config.bounds,
                 }}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}

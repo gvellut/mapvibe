@@ -1,0 +1,202 @@
+{
+    "title": "Hike to Pointe Noire de Pormenaz",
+    "version": 8,
+    "bounds": [
+        6.71480255,
+        45.92245402,
+        6.82571398,
+        45.98445600
+    ],
+    "sources": {
+        "osm-background": {
+            "type": "raster",
+            "tiles": [
+                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            ],
+            "tileSize": 256,
+            "attribution": "© OpenStreetMap contributors",
+            "maxzoom": 18
+        },
+        "ign-plan": {
+            "type": "raster",
+            "tiles": [
+                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
+            ],
+            "tileSize": 256,
+            "attribution": "© IGN",
+            "maxzoom": 18
+        },
+        "ign-ortho": {
+            "type": "raster",
+            "tiles": [
+                "https://data.geopf.fr/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
+            ],
+            "tileSize": 256,
+            "attribution": "© IGN"
+        },
+        "open-topo-map": {
+            "type": "raster",
+            "tiles": [
+                "https://a.tile.opentopomap.org/{z}/{x}/{y}.png"
+            ],
+            "tileSize": 256,
+            "attribution": "© OpenStreetMap contributors © OpenTopoMap",
+            "maxzoom": 16
+        },
+        "path": {
+            "type": "geojson",
+            "data": "/mapvibe/samples/sample2/path.geojson"
+        },
+        "poi": {
+            "type": "geojson",
+            "data": "/mapvibe/samples/sample2/poi.geojson"
+        }
+    },
+    "layers": [
+        {
+            "id": "osm-background",
+            "type": "raster",
+            "source": "osm-background",
+            "layout": {
+                "visibility": "none"
+            }
+        },
+        {
+            "id": "ign-plan",
+            "type": "raster",
+            "source": "ign-plan",
+            "layout": {
+                "visibility": "visible"
+            }
+        },
+        {
+            "id": "ign-ortho",
+            "type": "raster",
+            "source": "ign-ortho",
+            "layout": {
+                "visibility": "none"
+            }
+        },
+        {
+            "id": "open-topo-map",
+            "type": "raster",
+            "source": "open-topo-map",
+            "layout": {
+                "visibility": "none"
+            }
+        },
+        {
+            "type": "line",
+            "source": "path",
+            "paint": {
+                "line-color": "#ff0000"
+            },
+            "layout": {
+                "visibility": "visible"
+            },
+            "id": "path",
+            "filter": [
+                "==",
+                [
+                    "get",
+                    "category"
+                ],
+                "path"
+            ]
+        },
+        {
+            "type": "symbol",
+            "source": "poi",
+            "layout": {
+                "icon-image": "start"
+            },
+            "id": "start",
+            "filter": [
+                "==",
+                [
+                    "get",
+                    "category"
+                ],
+                "start"
+            ]
+        }
+    ],
+    "customImageResources": [
+        {
+            "id": "peak",
+            "url": "assets/markers/mountain.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "start",
+            "url": "assets/markers/start.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "end",
+            "url": "assets/markers/end.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "hiking",
+            "url": "assets/markers/hiking.png",
+            "pixelRatio": 2
+        },
+        {
+            "id": "camera",
+            "url": "assets/markers/camera.png",
+            "pixelRatio": 2
+        }
+    ],
+    "customUi": {
+        "panel": {
+            "backgroundColor": "#f8f9fa",
+            "width": "350px"
+        },
+        "controls": {
+            "zoom": true,
+            "scale": true,
+            "layerChooser": true,
+            "fullscreen": true,
+            "attribution": true
+        },
+        "backgroundLayers": [
+            {
+                "id": "osm-background",
+                "name": "Street Map"
+            },
+            {
+                "id": "ign-plan",
+                "name": "Plan IGN"
+            },
+            {
+                "id": "ign-ortho",
+                "name": "Aerial IGN"
+            },
+            {
+                "id": "open-topo-map",
+                "name": "OpenTopoMap"
+            }
+        ],
+        "dataLayers": [
+            {
+                "id": "path",
+                "layerIds": [
+                    "path"
+                ],
+                "name": "Path",
+                "interactive": false
+            },
+            {
+                "id": "poi",
+                "layerIds": [
+                    "start"
+                ],
+                "name": "POI",
+                "interactive": true
+            }
+        ],
+        "globalMinZoom": 5,
+        "globalMaxZoom": 18
+    }
+}
