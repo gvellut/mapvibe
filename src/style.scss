@@ -30,6 +30,7 @@
         align-items: center;
         padding: 0px 5px;
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: #f74848;
     }
 
     &__content-text {
@@ -37,14 +38,16 @@
     }
 
     &__close-btn {
-        background: none;
+        background: url('/assets/ui-icons/close.svg') center center no-repeat;
+        background-size: 20px 20px;
         border: none;
-        font-size: 24px;
         font-weight: bold;
         cursor: pointer;
         color: #555;
         padding: 0;
         line-height: 1;
+        width: 15px;
+        height: 15px;
 
         &:hover {
             color: #000;

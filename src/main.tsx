@@ -485,7 +485,7 @@ const InfoPanel: React.FC<{
                     onClick={onClose}
                     style={{ float: 'right', margin: '5px' }}
                 >
-                    ✕
+
                 </button>
             </div>
             <div id="info-panel__content-img">
