@@ -476,32 +476,32 @@ const InfoPanel: React.FC<{
                 backgroundColor: config.backgroundColor,
                 width: config.width,
                 zIndex: 1000,
-                display: 'block'
+                display: 'flex'
             }}
         >
             <div id="info-panel__header">
                 <button
                     id="info-panel__close-btn"
                     onClick={onClose}
-                    style={{ float: 'right', margin: '5px' }}
                 >
-
                 </button>
             </div>
-            <div id="info-panel__content-img">
-                {data.imageUrl && (
-                    <img
-                        src={data.imageUrl}
-                        alt={data.title || ''}
-                        style={{ width: '100%', height: 'auto', display: 'block' }}
-                    />
-                )}
-            </div>
-            <div id="info-panel__content-text">
-                {data.title && <h1>{data.title}</h1>}
-                {data.description && (
-                    <div dangerouslySetInnerHTML={{ __html: data.description }} />
-                )}
+            <div id="info-panel__content">
+                <div id="info-panel__content-img">
+                    {data.imageUrl && (
+                        <img
+                            src={data.imageUrl}
+                            alt={data.title || ''}
+                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                        />
+                    )}
+                </div>
+                <div id="info-panel__content-text">
+                    {data.title && <h1>{data.title}</h1>}
+                    {data.description && (
+                        <div dangerouslySetInnerHTML={{ __html: data.description }} />
+                    )}
+                </div>
             </div>
         </div>
     );
