@@ -2,6 +2,8 @@
 
 A static map interface for embedding in blog posts or websites, as a Google My Maps replacement. Runs fully client-side, loads configuration from a single JSON file.
 
+Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React in TypeScript.
+
 ## Configuration
 
 - Uses the [MapLibre Style Spec](https://maplibre.org/maplibre-gl-js-docs/style-spec/) for sources, layers, and styling.
