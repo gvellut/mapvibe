@@ -238,7 +238,7 @@ const MapVibeApp: React.FC = () => {
         // Add fullscreen button if enabled
         if (config.customUi?.controls?.fullscreen) {
             const fullscreenBtn = document.createElement('button');
-            fullscreenBtn.className = 'maplibregl-ctrl  custom-fullscreen-btn';
+            fullscreenBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-fullscreen-btn';
             fullscreenBtn.title = 'See larger';
             fullscreenBtn.innerHTML = '<span></span>';
             fullscreenBtn.onclick = () => window.open(window.location.href, '_blank');
