@@ -421,6 +421,7 @@ const LayerChooser: React.FC<{
             <button
                 className="layer-chooser-btn"
                 type="button"
+                title='Layers'
                 onClick={onToggle}
             />
             {visible && (
