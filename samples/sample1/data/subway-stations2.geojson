@@ -5,7 +5,8 @@
             "type": "Feature",
             "properties": {
                 "title": "Sample Station 2",
-                "imageUrl": "https://live.staticflickr.com/65535/54733107009_d20fc81d11_z.jpg"
+                "imageUrl": "https://live.staticflickr.com/65535/51484671175_db2c77767d_c.jpg",
+                "imageSize": "533,800"
             },
             "geometry": {
                 "type": "Point",

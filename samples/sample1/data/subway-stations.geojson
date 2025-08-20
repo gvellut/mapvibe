@@ -6,7 +6,8 @@
             "properties": {
                 "title": "Sample Station",
                 "description": "<p>This is a <b>sample</b> description.</p><p>Large descript to test scrolling. Scroll, scroll, scroll please.</p>",
-                "imageUrl": "https://live.staticflickr.com/65535/54733235955_80237f1b47_z.jpg"
+                "imageUrl": "https://live.staticflickr.com/65535/51483747321_4e5de534af_c.jpg",
+                "imageSize": "800,533"
             },
             "geometry": {
                 "type": "Point",

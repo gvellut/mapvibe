@@ -54,6 +54,7 @@ interface InfoPanelData {
     title?: string;
     description?: string;
     imageUrl?: string;
+    imageSize?: [number, number];
 }
 
 // Map Component Props
@@ -277,10 +278,19 @@ const MapVibeApp: React.FC = () => {
         const feature = features[0];
         const properties = feature.properties;
 
+        let imageSize: [number, number] | undefined = undefined;
+        if (typeof properties.imageSize === 'string') {
+            const parts = properties.imageSize.split(',').map(s => parseInt(s.trim(), 10));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                imageSize = [parts[0], parts[1]];
+            }
+        }
+
         setInfoPanelData({
             title: properties.title,
             description: properties.description,
-            imageUrl: properties.imageUrl
+            imageUrl: properties.imageUrl,
+            imageSize: imageSize
         });
         setInfoPanelVisible(true);
     }, [config]);
@@ -466,6 +476,7 @@ const InfoPanel: React.FC<{
     data: InfoPanelData;
     onClose: () => void;
 }> = ({ config, data, onClose }) => {
+    const ratio = data.imageSize ? `${data.imageSize[0]} / ${data.imageSize[1]}` : undefined;
     return (
         <div
             id="info-panel"
@@ -490,12 +501,14 @@ const InfoPanel: React.FC<{
             <div id="info-panel__content">
                 <div id="info-panel__content-img">
                     {data.imageUrl && (
-                        <img
-                            src={data.imageUrl}
-                            alt={data.title || ''}
-                            key={data.imageUrl}
-                            style={{ width: '100%', height: 'auto', display: 'block' }}
-                        />
+                        <div style={{ width: '100%', aspectRatio: ratio }}>
+                            <img
+                                src={data.imageUrl}
+                                alt={data.title || ''}
+                                key={data.imageUrl}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                        </div>
                     )}
                 </div>
                 <div id="info-panel__content-text">
