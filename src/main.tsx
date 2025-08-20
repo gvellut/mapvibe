@@ -493,6 +493,7 @@ const InfoPanel: React.FC<{
                         <img
                             src={data.imageUrl}
                             alt={data.title || ''}
+                            key={data.imageUrl}
                             style={{ width: '100%', height: 'auto', display: 'block' }}
                         />
                     )}
