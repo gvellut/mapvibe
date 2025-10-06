@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import maplibregl, { LngLatBounds } from 'maplibre-gl';
+import maplibregl, { LngLatBounds, type AddProtocolAction } from 'maplibre-gl';
 import './style.scss';
 
 
@@ -71,11 +71,12 @@ interface MapProps {
     onDrag?: () => void;
     onDblClick?: () => void;
     onStyleImageMissing?: (e: any) => void;
+    customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
 }
 
 // Custom Map Component
 const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
-    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing }, ref) => {
+    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols }, ref) => {
         const mapContainer = useRef<HTMLDivElement>(null);
         const mapInstance = useRef<maplibregl.Map | null>(null);
 
@@ -85,6 +86,13 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
 
         useEffect(() => {
             if (!mapContainer.current) return;
+
+            // Add custom protocols
+            if (customProtocols) {
+                customProtocols.forEach(protocol => {
+                    maplibregl.addProtocol(protocol.name, protocol.loadFn);
+                });
+            }
 
             // Create map instance
             mapInstance.current = new maplibregl.Map({
@@ -131,7 +139,7 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
 Map.displayName = 'Map';
 
 // --- REACT COMPONENTS ---
-export const MapVibeApp: React.FC = () => {
+export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }> }> = ({ customProtocols }) => {
     const mapRef = useRef<{ getMap: () => maplibregl.Map | null }>(null);
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -379,6 +387,7 @@ export const MapVibeApp: React.FC = () => {
                     setLayerChooserVisible(false);
                 }}
                 onStyleImageMissing={handleStyleImageMissing}
+                customProtocols={customProtocols}
             />
 
             {/* Controls */}
