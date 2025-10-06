@@ -153,11 +153,10 @@ Alternatively, you can import it in your main CSS file:
 @import 'mapvibe/style.css';
 ```
 
-**Icons and Assets**: The library includes UI icons (layers, close, fullscreen) and marker icons in the compiled CSS. These are embedded as data URIs or referenced with relative paths. When using the library:
+**Icons and Assets**: The library includes UI icons (layers, close, fullscreen) in the compiled CSS (by default Vite inline the referenced icons smaller than 4kB: These are embedded as data URIs). When using the library:
 
 1. If you're using custom marker icons, host them on your server and reference them in your config.json
 2. The default UI icons (layer chooser, close button, fullscreen) are bundled with the CSS
-3. Make sure your build tool (webpack, vite, etc.) can handle CSS imports and asset resolution
 
 **MapLibre GL CSS**: Don't forget to also import MapLibre GL's CSS for proper map styling:
 

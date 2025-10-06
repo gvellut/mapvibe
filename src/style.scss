@@ -50,7 +50,7 @@
     }
 
     &__close-btn {
-        background: url('/assets/ui-icons/close.svg') center center no-repeat;
+        background: url('./ui-icons/close.svg') center center no-repeat;
         background-size: 20px 20px;
         border: none;
         font-weight: bold;
@@ -96,7 +96,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-image: url('/assets/ui-icons/layers.png');
+        background-image: url('./ui-icons/layers.png');
         background-size: 20px 20px;
         background-position: center;
         background-repeat: no-repeat;
@@ -171,7 +171,7 @@
             display: inline-block;
             width: 100%;
             height: 100%;
-            background: url(/assets/ui-icons/fullscreen.png) center center / 24px 24px no-repeat;
+            background: url(./ui-icons/fullscreen.svg) center center / 24px 24px no-repeat;
         }
     }
 }

@@ -1,9 +1,7 @@
-// MapVibe Library Entry Point
-// This file exports the main component and types for use as an npm library
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import './style.scss';
+
 
 // --- TYPE DEFINITIONS for custom config properties ---
 export interface BackgroundLayerConfig {
@@ -101,31 +99,30 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
             const map = mapInstance.current;
 
             // Set up event handlers
+            if (onLoad) {
+                map.on('load', onLoad);
+            }
+
             if (onClick) {
                 map.on('click', onClick);
             }
+
             if (onDrag) {
                 map.on('drag', onDrag);
             }
+
             if (onDblClick) {
                 map.on('dblclick', onDblClick);
             }
+
             if (onStyleImageMissing) {
                 map.on('styleimagemissing', onStyleImageMissing);
             }
 
-            // Call onLoad callback after map is fully loaded
-            map.on('load', () => {
-                if (onLoad) {
-                    onLoad();
-                }
-            });
-
-            // Cleanup on unmount
             return () => {
                 map.remove();
             };
-        }, []); // Empty deps means this only runs once
+        }, []);
 
         return <div ref={mapContainer} style={style} />;
     }
@@ -431,45 +428,41 @@ const LayerChooser: React.FC<{
         <div className="maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser"
             style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000 }}>
             <button
-                className="custom-layers-toggle-btn"
+                className="layer-chooser-btn"
+                type="button"
+                title='Layers'
                 onClick={onToggle}
-                title="Select layer"
-            >
-                <span></span>
-            </button>
+            />
             {visible && (
-                <div className="custom-layers-panel">
-                    {config.customUi.backgroundLayers && config.customUi.backgroundLayers.length > 1 && (
-                        <div className="custom-layers-section">
-                            <h4>Background</h4>
-                            {config.customUi.backgroundLayers.map((layer: BackgroundLayerConfig) => (
-                                <label key={layer.id}>
-                                    <input
-                                        type="radio"
-                                        name="background"
-                                        checked={selectedBackgroundLayer === layer.id}
-                                        onChange={() => onBackgroundLayerChange(layer.id)}
-                                    />
-                                    {layer.name}
-                                </label>
-                            ))}
+                <div className="layer-chooser-panel visible">
+                    {/* Background Layers */}
+                    <h4>Background Layers</h4>
+                    {config.customUi.backgroundLayers.map((layer) => (
+                        <div key={layer.id}>
+                            <input
+                                type="radio"
+                                name="background-layer"
+                                id={`bg-${layer.id}`}
+                                checked={selectedBackgroundLayer === layer.id}
+                                onChange={() => onBackgroundLayerChange(layer.id)}
+                            />
+                            <label htmlFor={`bg-${layer.id}`}>{layer.name}</label>
                         </div>
-                    )}
-                    {config.customUi.dataLayers && config.customUi.dataLayers.length > 0 && (
-                        <div className="custom-layers-section">
-                            <h4>Data</h4>
-                            {config.customUi.dataLayers.map((layer: DataLayerConfig) => (
-                                <label key={layer.id}>
-                                    <input
-                                        type="checkbox"
-                                        checked={visibleDataLayers.has(layer.id)}
-                                        onChange={(e) => onDataLayerToggle(layer.id, e.target.checked)}
-                                    />
-                                    {layer.name}
-                                </label>
-                            ))}
+                    ))}
+
+                    {/* Data Layers */}
+                    <h4>Data Layers</h4>
+                    {config.customUi.dataLayers.map((layer) => (
+                        <div key={layer.id}>
+                            <input
+                                type="checkbox"
+                                id={`data-${layer.id}`}
+                                checked={visibleDataLayers.has(layer.id)}
+                                onChange={(e) => onDataLayerToggle(layer.id, e.target.checked)}
+                            />
+                            <label htmlFor={`data-${layer.id}`}>{layer.name}</label>
                         </div>
-                    )}
+                    ))}
                 </div>
             )}
         </div>
@@ -478,15 +471,11 @@ const LayerChooser: React.FC<{
 
 // Info Panel Component
 const InfoPanel: React.FC<{
-    config: { backgroundColor: string; width: string };
+    config: CustomUiConfig['panel'];
     data: InfoPanelData;
     onClose: () => void;
 }> = ({ config, data, onClose }) => {
-    let ratio = '4 / 3';
-    if (data.imageSize && data.imageSize[0] > 0 && data.imageSize[1] > 0) {
-        ratio = `${data.imageSize[0]} / ${data.imageSize[1]}`;
-    }
-
+    const ratio = data.imageSize ? `${data.imageSize[0]} / ${data.imageSize[1]}` : undefined;
     return (
         <div
             id="info-panel"
@@ -543,77 +532,53 @@ function findLayerWithId(layerId: string, config: AppConfig) {
  */
 async function fitMapToBounds(map: maplibregl.Map, sources: any) {
     const bounds = new LngLatBounds();
-    let hasAnyBounds = false;
+    const geojsonFetches: Promise<any>[] = [];
 
     for (const sourceName in sources) {
-        const sourceData = sources[sourceName];
-        if (sourceData.type === 'geojson' && sourceData.data) {
-            let geojsonData = sourceData.data;
-            if (typeof geojsonData === 'string') {
-                try {
-                    const response = await fetch(geojsonData);
-                    if (!response.ok) {
-                        console.warn(`Failed to load GeoJSON from ${geojsonData}`);
-                        continue;
-                    }
-                    geojsonData = await response.json();
-                } catch (error) {
-                    console.error('Error fetching GeoJSON:', error);
+        const source = sources[sourceName];
+        if (source.type === 'geojson' && typeof source.data === 'string') {
+            // Try to get the data directly from the map's source if available
+            const mapSource = map.getSource(sourceName) as maplibregl.GeoJSONSource | undefined;
+            if (mapSource && typeof mapSource.getData === 'function') {
+                const data = mapSource.getData();
+                if (data && typeof data === 'object') {
+                    geojsonFetches.push(Promise.resolve(data));
                     continue;
                 }
             }
+            // Fallback: fetch from URL if not present in maplibre
+            geojsonFetches.push(fetch(source.data).then(res => res.json()));
+        }
+    }
 
-            // Extend bounds for all GeoJSON features
-            if (geojsonData.type === 'FeatureCollection' && Array.isArray(geojsonData.features)) {
-                geojsonData.features.forEach((feature: any) => {
-                    if (feature.geometry) {
-                        const featureBounds = getGeometryBounds(feature.geometry);
-                        if (featureBounds) {
-                            bounds.extend(featureBounds);
-                            hasAnyBounds = true;
-                        }
+    try {
+        const geojsons = await Promise.all(geojsonFetches);
+        geojsons.forEach(geojson => {
+            geojson.features.forEach((feature: any) => {
+                if (feature.geometry?.coordinates) {
+                    if (feature.geometry.type === 'Point') {
+                        bounds.extend(feature.geometry.coordinates as [number, number]);
+                    } else if (feature.geometry.type === 'LineString') {
+                        (feature.geometry.coordinates as [number, number][]).forEach(coord => {
+                            bounds.extend(coord);
+                        });
+                    } else if (feature.geometry.type === 'Polygon') {
+                        (feature.geometry.coordinates as [number, number][][]).forEach(ring => {
+                            ring.forEach(coord => {
+                                bounds.extend(coord);
+                            });
+                        });
                     }
-                });
-            } else if (geojsonData.type === 'Feature' && geojsonData.geometry) {
-                const featureBounds = getGeometryBounds(geojsonData.geometry);
-                if (featureBounds) {
-                    bounds.extend(featureBounds);
-                    hasAnyBounds = true;
                 }
-            }
+            });
+        });
+
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, { padding: 100 }); // 10% padding approximation
         }
+    } catch (error) {
+        console.error("Could not fit map to bounds:", error);
     }
-
-    if (hasAnyBounds) {
-        map.fitBounds(bounds, { padding: 50 });
-    }
-}
-
-/**
- * Helper to extract bounds from a geometry.
- */
-function getGeometryBounds(geometry: any): LngLatBounds | null {
-    if (!geometry || !geometry.type) return null;
-
-    const bounds = new LngLatBounds();
-    let hasCoords = false;
-
-    function addCoordsToBounds(coords: any) {
-        if (Array.isArray(coords)) {
-            if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                bounds.extend([coords[0], coords[1]]);
-                hasCoords = true;
-            } else {
-                coords.forEach(addCoordsToBounds);
-            }
-        }
-    }
-
-    if (geometry.coordinates) {
-        addCoordsToBounds(geometry.coordinates);
-    }
-
-    return hasCoords ? bounds : null;
 }
 
 /**
@@ -621,9 +586,10 @@ function getGeometryBounds(geometry: any): LngLatBounds | null {
  */
 function getClickableLayerIds(config: AppConfig): string[] {
     const clickableLayerIds: string[] = [];
-    if (config.customUi?.dataLayers) {
+    if (config.customUi && Array.isArray(config.customUi.dataLayers)) {
         config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
             if (dataLayer.interactive) {
+                // Add all layerIds from this interactive data layer
                 clickableLayerIds.push(...dataLayer.layerIds);
             }
         });
