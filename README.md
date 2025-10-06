@@ -68,16 +68,131 @@ as the URL for testing.
 
 ## Build
 
+### Building the Website
+
 ```bash
 npm run build
 ```
 
-This will output static files to `dist`.
+This will output static files to `dist` for hosting as a standalone website.
 
-There is currently no downloadable artifact for the build so you will need to run that command. Before that:
-- The hosting path can be customized in `vite.config.json` (the CSS will load some assets using that path so it should correspond to where it will be hosted).
+Before building:
+- The hosting path can be customized in `vite.config.ts` (the CSS will load some assets using that path so it should correspond to where it will be hosted).
 - The favicon can also be changed.
 - New icons can be added in `public/assets/markers` (but they can be loaded from any place so not really needed except convenience).
+
+### Building the Library
+
+To build MapVibe as an npm library:
+
+```bash
+npm run build:lib
+```
+
+This will generate:
+- `dist/mapvibe.mjs` - ES module build
+- `dist/mapvibe.cjs` - CommonJS build
+- `dist/mapvibe.css` - Compiled CSS styles
+- `dist/lib.d.ts` - TypeScript declarations for autocomplete and type checking
+
+## Publishing to NPM
+
+To publish the library to npm:
+
+1. Update the version in `package.json`
+2. Ensure you're logged in to npm: `npm login`
+3. Run: `npm publish`
+
+The `prepublishOnly` script will automatically run `npm run build:lib` before publishing.
+
+## Using MapVibe as a Library
+
+### Installation
+
+```bash
+npm install mapvibe
+```
+
+### Peer Dependencies
+
+MapVibe requires the following peer dependencies:
+- `react` (^18.0.0 || ^19.0.0)
+- `react-dom` (^18.0.0 || ^19.0.0)
+- `maplibre-gl` (^4.0.0 || ^5.0.0)
+
+Make sure to install them if not already present:
+
+```bash
+npm install react react-dom maplibre-gl
+```
+
+### Basic Usage
+
+```tsx
+import { MapVibeApp } from 'mapvibe';
+import 'mapvibe/style.css';
+
+function App() {
+  return <MapVibeApp />;
+}
+```
+
+The `MapVibeApp` component expects a URL parameter `config` pointing to a configuration JSON file, similar to the standalone website usage.
+
+### Importing CSS and Assets
+
+**CSS**: The library exports a compiled CSS file that must be imported in your application:
+
+```tsx
+import 'mapvibe/style.css';
+```
+
+Alternatively, you can import it in your main CSS file:
+
+```css
+@import 'mapvibe/style.css';
+```
+
+**Icons and Assets**: The library includes UI icons (layers, close, fullscreen) and marker icons in the compiled CSS. These are embedded as data URIs or referenced with relative paths. When using the library:
+
+1. If you're using custom marker icons, host them on your server and reference them in your config.json
+2. The default UI icons (layer chooser, close button, fullscreen) are bundled with the CSS
+3. Make sure your build tool (webpack, vite, etc.) can handle CSS imports and asset resolution
+
+**MapLibre GL CSS**: Don't forget to also import MapLibre GL's CSS for proper map styling:
+
+```tsx
+import 'maplibre-gl/dist/maplibre-gl.css';
+```
+
+### TypeScript Support
+
+MapVibe is written in TypeScript and includes full type definitions. When using the library in a TypeScript project, you'll get:
+
+- Full autocomplete for the `MapVibeApp` component
+- Type definitions for configuration interfaces:
+  - `AppConfig`
+  - `BackgroundLayerConfig`
+  - `DataLayerConfig`
+  - `CustomUiConfig`
+  - `InfoPanelData`
+
+Example with types:
+
+```tsx
+import { MapVibeApp, AppConfig } from 'mapvibe';
+import 'mapvibe/style.css';
+
+// TypeScript will provide autocomplete for config structure
+const config: AppConfig = {
+  title: "My Map",
+  center: [6.8665, 45.9237],
+  zoom: 12,
+  // ... rest of config with full type checking
+};
+```
+
+
 
 ## License
 
