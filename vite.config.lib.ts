@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
+    publicDir: false,
     build: {
         lib: {
-            entry: resolve(__dirname, 'src/lib.tsx'),
+            entry: 'src/lib.tsx',
             name: 'MapVibe',
             formats: ['es', 'cjs'],
             fileName: (format) => `mapvibe.${format === 'es' ? 'mjs' : 'cjs'}`
