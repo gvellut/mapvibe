@@ -22,7 +22,7 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "build:lib": "tsc -p tsconfig.lib.json && vite build --config vite.config.lib.ts",
+        "build:lib": "vite build --config vite.config.lib.ts && tsc -p tsconfig.lib.json",
         "preview": "vite preview",
         "copy-dist": "dotenv -e .env -- sh -c 'rsync -av --delete dist/ $BLOG_STATIC_FOLDER'",
         "prepublishOnly": "npm run build:lib"

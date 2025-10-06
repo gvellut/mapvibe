@@ -1,0 +1,32 @@
+# Source files (the dist folder contains built files)
+src/
+index.html
+vite.config.ts
+vite.config.lib.ts
+tsconfig.json
+tsconfig.lib.json
+
+# Test and development files
+samples/
+prompts/
+
+# Build artifacts and temp files
+*.bak
+*.local
+
+# Environment and config files
+.env
+.env.local
+.env.*.local
+
+# Editor and system files
+.vscode/
+.idea/
+.DS_Store
+*.sw?
+
+# CI/CD
+.github/
+
+# Documentation that's not needed in the package
+public/
