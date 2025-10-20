@@ -72,11 +72,12 @@ interface MapProps {
     onDblClick?: () => void;
     onStyleImageMissing?: (e: any) => void;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
+    cooperativeGestures?: boolean;
 }
 
 // Custom Map Component
 const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
-    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols }, ref) => {
+    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, cooperativeGestures }, ref) => {
         const mapContainer = useRef<HTMLDivElement>(null);
         const mapInstance = useRef<maplibregl.Map | null>(null);
 
@@ -101,7 +102,8 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
                 center: initialViewState.center,
                 zoom: initialViewState.zoom,
                 bounds: initialViewState.bounds,
-                attributionControl: attributionControl ? {} : false
+                attributionControl: attributionControl ? {} : false,
+                cooperativeGestures,
             });
 
             const map = mapInstance.current;
@@ -148,12 +150,17 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
     const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
+    const [cooperativeGestures, setCooperativeGestures] = useState<boolean>(false);
 
     // Initialize app on mount
     useEffect(() => {
         const initializeApp = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const configUrl = urlParams.get('config');
+            const cooperativeGesturesParam = urlParams.get('cooperativeGestures');
+            if (cooperativeGesturesParam) {
+                setCooperativeGestures(['true', '1', 'y', 'yes'].includes(cooperativeGesturesParam.toLowerCase()));
+            }
 
             if (!configUrl) {
                 setError('Error: The `config` URL parameter is missing.');
@@ -249,7 +256,11 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
             fullscreenBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-fullscreen-btn';
             fullscreenBtn.title = 'See larger';
             fullscreenBtn.innerHTML = '<span></span>';
-            fullscreenBtn.onclick = () => window.open(window.location.href, '_blank');
+            fullscreenBtn.onclick = () => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('cooperativeGestures');
+                window.open(url.href, '_blank');
+            };
             map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
         }
 
@@ -379,6 +390,7 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
                 }}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
+                cooperativeGestures={cooperativeGestures}
                 onLoad={onMapLoad}
                 onClick={onMapClick}
                 onDrag={() => setLayerChooserVisible(false)}
