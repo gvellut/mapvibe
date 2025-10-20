@@ -20,6 +20,8 @@ export interface CustomUiConfig {
     panel: {
         backgroundColor: string;
         width: string;
+        recenterOnOpen?: boolean;
+        marginRecenterOnOpen?: number;
     };
     controls: {
         zoom?: boolean;
@@ -311,6 +313,26 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
             imageSize: imageSize
         });
         setInfoPanelVisible(true);
+
+        const { recenterOnOpen, marginRecenterOnOpen } = config.customUi.panel;
+        if (recenterOnOpen && window.innerWidth > 450) {
+            const panelWidth = parseInt(config.customUi.panel.width, 10);
+            const margin = marginRecenterOnOpen || 0;
+            const mapContainer = map.getContainer();
+            const mapWidth = mapContainer.offsetWidth;
+            const mapHeight = mapContainer.offsetHeight;
+
+            // Panel is on the left, so visible map area is shifted to the right.
+            // The center of the visible area is `panelWidth + margin + (visibleWidth / 2)`
+            const visibleWidth = mapWidth - panelWidth - margin;
+            const targetX = panelWidth + margin + (visibleWidth / 2);
+            const targetY = mapHeight / 2;
+
+            const panX = targetX - e.point.x;
+            const panY = targetY - e.point.y;
+
+            map.panBy([panX, panY], { duration: 0 });
+        }
     }, [config]);
 
     // Handle background layer change
@@ -503,7 +525,7 @@ const InfoPanel: React.FC<{
             style={{
                 position: 'absolute',
                 top: 0,
-                right: 0,
+                left: 0,
                 height: '100%',
                 backgroundColor: config.backgroundColor,
                 width: config.width,
