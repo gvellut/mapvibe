@@ -1,0 +1,11 @@
+I want to add a recentering of the map when the info panel opens after a click on a feature.
+- currently the info panel opens on the left and the map does not pan : the result is that the feature / location of the click (same location if the feature is a marker) can become covered by the info panel
+- I want to have an option set in the customUi part of the config JSON : as boolean : 
+    "customUi": {
+        "panel": {
+            "recenterOnOpen" : true, false 
+    => Only if an info panel opens, the location of the click (the feature can be a marker or a line or polygon : click location should be what is taken into account) should not be covered by the info panel. If it were to be covered, the map needs to be panned (never zoomed), so that the location of the click is at the center (vertical + horizontal) of the space not covered by the info panel. The pan should not have any animation (immediate)
+- Some objects are not clickable so no object for them ; also panning or clicking without triggering the opening of an info panel should not provoke that behaviour. 
+- The info panel opens on the left side of the map : some margin right of the info panel + left of the map border + lower the top border + on top of the bottom border of the map : should also be considered as covered and the recentering of the click. If a click that opens the info panel takes place on those areas : the recentering should happen. The margin can be configured in the customUI > panel > marginRecenterOnOpen in pixel (implicit : so just a number).
+- on small screens (see style.scss), the info panel covers the whole map so no object in that case. Only when part of the map is still visible.
+- Also, if testing your code with playwright (do not add config in the project) a config file can be loaded using : <server:port>/?config=samples/sample1/config.json if context of the server is at the root of the project
