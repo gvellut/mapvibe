@@ -1,18 +1,4 @@
-I want to add an option so that the map on touch screen (mobile devices) to require 2 fingers for panning.
-- Like with Google Maps ie
-> Controlling Gesture Handling
-
-> When a user scrolls a page that contains a map, the scrolling action can unintentionally cause the map to zoom. This behavior can be controlled using the gestureHandling map option.
-> gestureHandling: cooperative
-> The map below uses the gestureHandling option set to cooperative, allowing the user to scroll the page normally, without zooming or panning the map. Users can zoom the map by clicking the zoom controls. They can also zoom and pan by using two-finger movements on the map > for touchscreen devices.
-
-> "cooperative": Scroll events and one-finger touch gestures scroll the page, and do not zoom or pan the map. Two-finger touch gestures pan and zoom the map. Scroll events with a ctrl key or ⌘ key pressed zoom the map.
-> In this mode the map cooperates with the page. 
-
-- so that when scrolling down the page, the map does not pan, but the page scrolls. I would like the additional option of disabling the scroll wheel by itself and require ctr / cmd + scroll wheel.
-- I want it optional. The name of the option can be the same as for Google Maps. Expose it as a URL parameter (on top of the config parameter that points to a JSON)
-- It might be Maplibre GL (used by the maps in this project) already has that capability. Then simply document it and expose it as a config option in a URL parameter. However it seems the cooperative gesture in maplibre disables the scroll wheel. 
-- I would like an option for mobile and absolutely no effect on desktop devices with mouse. I would like however to add an interme option 
-- I would like to be able to indicate : if touch screen, cooperative. If mouse, normal panning + zooming (ie with double-click or scroll wheel) : so  does the right thing depending on the device. But I also want a way to force either normal handling OR 2-finger panning+zooming.
-- When the user tries to pan with one finger, the page scrolls normally + the map shows an opaque mask with a text : that text does not need to be configured in the customUI config. The text should be different if panning with one finger OR scrolling with only the mouse wheel (if ctl / cmd has been configured). Sso dependent on the gesture or the device. It can be hardcoded in the code. But make it possible to override it in customUi.
-- There might be a difficulty in that the map is usually embedded in an iframe. The behaviour should work when the map is on a iframe (100% width / height there) or as a DIV component in a map
+I want to add the processing of a URL parameter to enable cooperative gesture in Maplibre.
+- the parmeter will be called cooperativeGestures and value can be any value that can mean true or false (ie 1, y, yes, true in any capitalization)
+- it will configure the maplibre instance same as the cooperativeGestures supported in maplibre. I want it to be a URL param because I want to separate the cooperativeGestures in normal mode or gesture with the same config.json
+- that parameter will not be transmitted to the fullscreen action ie fullscreenBtn.onclick
