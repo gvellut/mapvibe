@@ -53,12 +53,12 @@
         "@vitejs/plugin-react": "^5.0.4",
         "dotenv-cli": "^9.0.0",
         "sass": "^1.89.2",
-        "typescript": "~5.8.3",
+        "typescript": "~5.9.3",
         "vite": "^7.0.4"
     },
     "dependencies": {
         "maplibre-gl": "^5.6.1",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0"
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
     }
 }

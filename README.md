@@ -15,6 +15,17 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
 - Only one background layer should be visible at a time (including load time ie with `layout.visibility: visible`). Other layers follow standard MapLibre definitions.
 
+### Notes
+
+In `"customUi" > "panel"`,  to recenter marker when it would be covered by info panel, add:
+
+```js
+"marginRecenterOnOpen": 10,
+"recenterOnOpen": true
+```
+
+To enable cooperativeGestures (`ctrl + scroll` to zoom on desktop + 2 finger pan on mobile), add `cooperativeGestures=y` to URL. That parameter will be removed when opening the map in fullscreen using the fullscreen button.
+
 ## Usage
 
 - Host the `dist` output (see the doc on [Build](#build)) in folder `/mapvibe`.

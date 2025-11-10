@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import maplibregl, { LngLatBounds, type AddProtocolAction } from 'maplibre-gl';
 import './style.scss';
 
+// defined in css: width of map smaller than that : infopanel takes full size
+const INFO_PANEL_DESKTOP_WIDTH = 450;
+
 
 // --- TYPE DEFINITIONS for custom config properties ---
 export interface BackgroundLayerConfig {
@@ -105,10 +108,14 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
                 zoom: initialViewState.zoom,
                 bounds: initialViewState.bounds,
                 attributionControl: attributionControl ? {} : false,
-                cooperativeGestures,
+                cooperativeGestures: cooperativeGestures,
             });
 
             const map = mapInstance.current;
+
+            map.dragRotate.disable();
+            map.touchZoomRotate.disableRotation();
+            map.touchPitch.disable();
 
             // Set up event handlers
             if (onLoad) {
@@ -164,6 +171,7 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
                 setCooperativeGestures(['true', '1', 'y', 'yes'].includes(cooperativeGesturesParam.toLowerCase()));
             }
 
+            // TODO have 2 ways to pass the settings : take care of the config URL + fetch before initializing of mapvibe
             if (!configUrl) {
                 setError('Error: The `config` URL parameter is missing.');
                 return;
@@ -315,23 +323,34 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
         setInfoPanelVisible(true);
 
         const { recenterOnOpen, marginRecenterOnOpen } = config.customUi.panel;
-        if (recenterOnOpen && window.innerWidth > 450) {
+        if (recenterOnOpen && window.innerWidth > INFO_PANEL_DESKTOP_WIDTH) {
             const panelWidth = parseInt(config.customUi.panel.width, 10);
             const margin = marginRecenterOnOpen || 0;
             const mapContainer = map.getContainer();
             const mapWidth = mapContainer.offsetWidth;
             const mapHeight = mapContainer.offsetHeight;
 
-            // Panel is on the left, so visible map area is shifted to the right.
-            // The center of the visible area is `panelWidth + margin + (visibleWidth / 2)`
-            const visibleWidth = mapWidth - panelWidth - margin;
-            const targetX = panelWidth + margin + (visibleWidth / 2);
-            const targetY = mapHeight / 2;
+            let coveredLeft = panelWidth + margin;
+            let coveredRight = mapWidth - margin;
+            let coveredTop = margin;
+            let coveredBottom = mapHeight - margin;
 
-            const panX = targetX - e.point.x;
-            const panY = targetY - e.point.y;
+            let [clickX, clickY] = [e.point.x, e.point.y];
+            if (clickX < coveredLeft || clickX > coveredRight
+                || clickY < coveredTop || clickY > coveredBottom) {
+                // Panel is on the left, so visible map area is shifted to the right.
+                // The center of the visible area is `panelWidth + margin + (visibleWidth / 2)`
+                const visibleWidth = mapWidth - panelWidth - margin;
+                const targetX = panelWidth + margin + (visibleWidth / 2);
+                const targetY = mapHeight / 2;
 
-            map.panBy([panX, panY], { duration: 0 });
+                const panX = -(targetX - clickX);
+                const panY = -(targetY - clickY);
+
+                map.panBy([panX, panY], { duration: 0 });
+            }
+
+
         }
     }, [config]);
 

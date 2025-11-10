@@ -145,7 +145,9 @@
     "customUi": {
         "panel": {
             "backgroundColor": "#f8f9fa",
-            "width": "350px"
+            "width": "350px",
+            "marginRecenterOnOpen": 100,
+            "recenterOnOpen": true
         },
         "controls": {
             "zoom": true,
