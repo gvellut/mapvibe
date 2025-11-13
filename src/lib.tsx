@@ -108,11 +108,18 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
                 zoom: initialViewState.zoom,
                 bounds: initialViewState.bounds,
                 attributionControl: attributionControl ? {} : false,
-                cooperativeGestures: cooperativeGestures,
             });
 
             const map = mapInstance.current;
 
+            if (cooperativeGestures) {
+                // cooperative gestures only on mobile
+                if (isMobile()) {
+                    map.cooperativeGestures.enable();
+                }
+            }
+
+            // disable rotation and pitch shift everywhere
             map.dragRotate.disable();
             map.touchZoomRotate.disableRotation();
             map.touchPitch.disable();
@@ -700,4 +707,11 @@ function getClampedZoomBounds(sourceDef: any, chooserConfig: CustomUiConfig) {
         maxZoom = Math.min(maxZoom ?? chooserConfig.globalMaxZoom, chooserConfig.globalMaxZoom);
     }
     return { minZoom, maxZoom };
+}
+
+function isMobile(): boolean {
+    // Check for touch events and a coarse check of the user agent
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isLikelyMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    return hasTouch && isLikelyMobile;
 }
