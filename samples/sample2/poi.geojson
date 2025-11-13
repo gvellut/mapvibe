@@ -1,8 +1,29 @@
 {
-"type": "FeatureCollection",
-"name": "poi",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "category": "start", "title": null, "description": null, "imageUrl": null }, "geometry": { "type": "Point", "coordinates": [ 6.739558718111113, 45.951080113881531 ] } }
-]
+    "type": "FeatureCollection",
+    "name": "poi",
+    "crs": {
+        "type": "name",
+        "properties": {
+            "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+        }
+    },
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "category": "start",
+                "title": "Cascade de Fontany",
+                "description": "Hello asdasdasd",
+                "imageUrl": "https://cdn.vellut.com/img/73a66140275147a5/poi/54748297012_d44b25ebbe.jpg",
+                "imageSize": "427,640"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.739558718111113,
+                    45.951080113881531
+                ]
+            }
+        }
+    ]
 }

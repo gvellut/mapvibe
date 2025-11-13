@@ -348,8 +348,8 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
                 || clickY < coveredTop || clickY > coveredBottom) {
                 // Panel is on the left, so visible map area is shifted to the right.
                 // The center of the visible area is `panelWidth + margin + (visibleWidth / 2)`
-                const visibleWidth = mapWidth - panelWidth - margin;
-                const targetX = panelWidth + margin + (visibleWidth / 2);
+                const visibleWidth = mapWidth - panelWidth;
+                const targetX = panelWidth + (visibleWidth / 2);
                 const targetY = mapHeight / 2;
 
                 const panX = -(targetX - clickX);
@@ -428,7 +428,7 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
     }
 
     return (
-        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <Map
                 ref={mapRef}
                 mapStyle={config as any}

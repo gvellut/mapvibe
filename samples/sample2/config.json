@@ -145,8 +145,8 @@
     "customUi": {
         "panel": {
             "backgroundColor": "#f8f9fa",
-            "width": "350px",
-            "marginRecenterOnOpen": 100,
+            "width": "300px",
+            "marginRecenterOnOpen": 10,
             "recenterOnOpen": true
         },
         "controls": {
