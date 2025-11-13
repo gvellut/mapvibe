@@ -5,6 +5,8 @@ import './style.scss';
 // defined in css: width of map smaller than that : infopanel takes full size
 const INFO_PANEL_DESKTOP_WIDTH = 450;
 
+const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
+
 
 // --- TYPE DEFINITIONS for custom config properties ---
 export interface BackgroundLayerConfig {
@@ -77,12 +79,12 @@ interface MapProps {
     onDblClick?: () => void;
     onStyleImageMissing?: (e: any) => void;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
-    cooperativeGestures?: boolean;
+    mobileCooperativeGestures?: boolean;
 }
 
 // Custom Map Component
 const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
-    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, cooperativeGestures }, ref) => {
+    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures }, ref) => {
         const mapContainer = useRef<HTMLDivElement>(null);
         const mapInstance = useRef<maplibregl.Map | null>(null);
 
@@ -112,11 +114,9 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
 
             const map = mapInstance.current;
 
-            if (cooperativeGestures) {
+            if (mobileCooperativeGestures && isMobile()) {
                 // cooperative gestures only on mobile
-                if (isMobile()) {
-                    map.cooperativeGestures.enable();
-                }
+                map.cooperativeGestures.enable();
             }
 
             // disable rotation and pitch shift everywhere
@@ -166,16 +166,16 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
     const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
-    const [cooperativeGestures, setCooperativeGestures] = useState<boolean>(false);
+    const [mobileCooperativeGestures, setMobileCooperativeGestures] = useState<boolean>(true); // default : cooperative gestures on mobile
 
     // Initialize app on mount
     useEffect(() => {
         const initializeApp = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const configUrl = urlParams.get('config');
-            const cooperativeGesturesParam = urlParams.get('cooperativeGestures');
-            if (cooperativeGesturesParam) {
-                setCooperativeGestures(['true', '1', 'y', 'yes'].includes(cooperativeGesturesParam.toLowerCase()));
+            const mobileCooperativeGesturesParam = urlParams.get(MOBILE_COOPERATIVE_GESTURES_PARAM); // mobile cooperative gestures
+            if (mobileCooperativeGesturesParam) {
+                setMobileCooperativeGestures(!['false', '0', 'n', 'no'].includes(mobileCooperativeGesturesParam.toLowerCase()));
             }
 
             // TODO have 2 ways to pass the settings : take care of the config URL + fetch before initializing of mapvibe
@@ -275,7 +275,8 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
             fullscreenBtn.innerHTML = '<span></span>';
             fullscreenBtn.onclick = () => {
                 const url = new URL(window.location.href);
-                url.searchParams.delete('cooperativeGestures');
+                // make sure no cooperative gestures on full screen tab : touch is only for the map
+                url.searchParams.set(MOBILE_COOPERATIVE_GESTURES_PARAM, 'n');
                 window.open(url.href, '_blank');
             };
             map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
@@ -438,7 +439,7 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
                 }}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
-                cooperativeGestures={cooperativeGestures}
+                mobileCooperativeGestures={mobileCooperativeGestures}
                 onLoad={onMapLoad}
                 onClick={onMapClick}
                 onDrag={() => setLayerChooserVisible(false)}
