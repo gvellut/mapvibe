@@ -8,4 +8,7 @@ export default defineConfig({
     //     open: '/?config=samples/config.json'
     // }
     base: '/mapvibe/',
+    build: {
+        chunkSizeWarningLimit: 1500 // set your desired limit in KB
+    }
 });
