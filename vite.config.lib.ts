@@ -7,7 +7,7 @@ export default defineConfig({
     publicDir: false,
     build: {
         lib: {
-            entry: 'src/lib.tsx',
+            entry: 'src/lib/index.tsx',
             name: 'MapVibe',
             formats: ['es', 'cjs'],
             fileName: (format) => `mapvibe.${format === 'es' ? 'mjs' : 'cjs'}`

@@ -157,79 +157,44 @@ const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
 Map.displayName = 'Map';
 
 // --- REACT COMPONENTS ---
-export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }> }> = ({ customProtocols }) => {
+export const MapVibeMap: React.FC<{
+    config: AppConfig,
+    customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
+    mobileCooperativeGestures?: boolean
+}> = ({ config, customProtocols, mobileCooperativeGestures = true }) => {
     const mapRef = useRef<{ getMap: () => maplibregl.Map | null }>(null);
-    const [config, setConfig] = useState<AppConfig | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
     const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
-    const [mobileCooperativeGestures, setMobileCooperativeGestures] = useState<boolean>(true); // default : cooperative gestures on mobile
 
-    // Initialize app on mount
     useEffect(() => {
-        const initializeApp = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const configUrl = urlParams.get('config');
-            const mobileCooperativeGesturesParam = urlParams.get(MOBILE_COOPERATIVE_GESTURES_PARAM); // mobile cooperative gestures
-            if (mobileCooperativeGesturesParam) {
-                setMobileCooperativeGestures(!['false', '0', 'n', 'no'].includes(mobileCooperativeGesturesParam.toLowerCase()));
+        // Initialize layer states from config
+        if (config.customUi?.backgroundLayers) {
+            const defaultBg = config.customUi.backgroundLayers.find((layer: BackgroundLayerConfig) =>
+                config.layers?.find((l: any) => l.id === layer.id && l.layout?.visibility !== 'none')
+            );
+            if (defaultBg) {
+                setSelectedBackgroundLayer(defaultBg.id);
             }
+        }
 
-            // TODO have 2 ways to pass the settings : take care of the config URL + fetch before initializing of mapvibe
-            if (!configUrl) {
-                setError('Error: The `config` URL parameter is missing.');
-                return;
-            }
-
-            try {
-                const response = await fetch(configUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch config file: ${response.statusText}`);
+        if (config.customUi?.dataLayers) {
+            const visibleData = new Set<string>();
+            config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
+                // Check if any of the referenced layers are visible
+                const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
+                    const layerDef = config.layers?.find((l: any) => l.id === layerId);
+                    return layerDef && layerDef.layout?.visibility !== 'none';
+                });
+                if (hasVisibleLayers) {
+                    visibleData.add(dataLayer.id);
                 }
-                const config = await response.json();
-
-                // Set page title from config
-                if (config.title) {
-                    document.title = config.title;
-                }
-
-                setConfig(config);
-
-                // Initialize layer states
-                if (config.customUi?.backgroundLayers) {
-                    const defaultBg = config.customUi.backgroundLayers.find((layer: BackgroundLayerConfig) =>
-                        config.layers?.find((l: any) => l.id === layer.id && l.layout?.visibility !== 'none')
-                    );
-                    if (defaultBg) {
-                        setSelectedBackgroundLayer(defaultBg.id);
-                    }
-                }
-
-                if (config.customUi?.dataLayers) {
-                    const visibleData = new Set<string>();
-                    config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
-                        // Check if any of the referenced layers are visible
-                        const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
-                            const layerDef = config.layers?.find((l: any) => l.id === layerId);
-                            return layerDef && layerDef.layout?.visibility !== 'none';
-                        });
-                        if (hasVisibleLayers) {
-                            visibleData.add(dataLayer.id);
-                        }
-                    });
-                    setVisibleDataLayers(visibleData);
-                }
-
-            } catch (error) {
-                setError(`Error initializing application: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        };
-
-        initializeApp();
-    }, []);
+            });
+            setVisibleDataLayers(visibleData);
+        }
+    }, [config]);
 
     // Handle styleimagemissing event
     const handleStyleImageMissing = useCallback(async (e: any) => {
@@ -414,18 +379,6 @@ export const MapVibeApp: React.FC<{ customProtocols?: Array<{ name: string, load
             });
         }
     }, [visibleDataLayers, config]);
-
-    if (error) {
-        return (
-            <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'red' }}>
-                {error}
-            </div>
-        );
-    }
-
-    if (!config) {
-        return <div>Loading...</div>;
-    }
 
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
