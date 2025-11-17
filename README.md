@@ -77,6 +77,10 @@ Some simple `config.json` samples can be found in folder `samples`. To load one 
 
 as the URL for testing.
 
+Or, since the project will be used inside an iframe (with limited width and height), use :
+
+`http://localhost:5173/mapvibe/iframe.html?config=samples/sample2/config.json`
+
 ## Build
 
 ### Building the Website
