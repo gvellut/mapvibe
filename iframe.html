@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/favicon.png" type="image/x-icon" />
+    <style>
+        /* Basic reset to remove default margin/padding */
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Prevents scrollbars on the body */
+        }
+    </style>
+</head>
+
+<script>
+    window.addEventListener('DOMContentLoaded', function () {
+        const params = window.location.search;
+        const iframe = document.querySelector('iframe');
+        if (iframe && params) {
+            // Remove any trailing '?' from the base src
+            let baseSrc = iframe.getAttribute('src').replace(/\?$/, '');
+            iframe.src = baseSrc + params;
+        }
+    });
+</script>
+
+<body>
+    <iframe loading="lazy" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="/mapvibe/" width="540px"
+        height="550px"></iframe>
+</body>
+
+</html>
