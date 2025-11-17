@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapVibeMap, type AppConfig } from '../lib';
+import { MapVibeMap, type AppConfig } from './lib';
 
 const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
 
