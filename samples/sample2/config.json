@@ -189,7 +189,8 @@
                     "start"
                 ],
                 "name": "POI",
-                "interactive": true
+                "interactive": true,
+                "openUrl": true
             }
         ],
         "globalMinZoom": 5,

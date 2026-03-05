@@ -19,6 +19,7 @@ export interface DataLayerConfig {
     name: string;
     layerIds: string[];
     interactive?: boolean;
+    openUrl?: boolean;
 }
 
 export interface CustomUiConfig {
@@ -278,6 +279,18 @@ export const MapVibeMap: React.FC<{
 
         const feature = features[0];
         const properties = feature.properties;
+        const dataLayer = getDataLayerForMapLayerId(config, feature.layer.id);
+
+        if (dataLayer?.openUrl) {
+            const featureUrl = typeof properties?.url === 'string' ? properties.url : undefined;
+            if (!featureUrl) {
+                console.warn(`Feature in data layer "${dataLayer.id}" is missing a string "url" property.`, feature);
+            } else {
+                window.open(featureUrl, '_blank', 'noopener,noreferrer');
+            }
+            setInfoPanelVisible(false);
+            return;
+        }
 
         let imageSize: [number, number] | undefined = undefined;
         if (typeof properties.imageSize === 'string') {
@@ -618,6 +631,12 @@ function getClickableLayerIds(config: AppConfig): string[] {
         });
     }
     return clickableLayerIds;
+}
+
+function getDataLayerForMapLayerId(config: AppConfig, mapLayerId: string): DataLayerConfig | undefined {
+    return config.customUi?.dataLayers?.find((dataLayer: DataLayerConfig) =>
+        dataLayer.layerIds.includes(mapLayerId)
+    );
 }
 
 /**

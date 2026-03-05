@@ -10,6 +10,8 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
 - The config file must include a `customUi` object:
   - `customUi.backgroundLayers`: List of raster layers that can be toggled as backgrounds.
   - `customUi.dataLayers`: List of data layers (lines, points, polygons) for toggling visibility.
+    - Set `interactive: true` to make a data layer clickable.
+    - Add `openUrl: true` on an interactive data layer to open each clicked feature's `url` property in a new tab instead of showing the info panel.
   - `customUi.panel`: Panel color and width.
   - `customUi.controls`: Which UI controls to show (zoom, scale, layer chooser, fullscreen, attribution).
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
@@ -73,7 +75,7 @@ npm run dev
 
 Some simple `config.json` samples can be found in folder `samples`. To load one of them, use something like
 
-`http://localhost:5173/?config=samples/sample1/config.json`
+`http://localhost:5173/mapvibe/?config=samples/sample1/config.json`
 
 as the URL for testing.
 
@@ -205,6 +207,8 @@ const config: AppConfig = {
   // ... rest of config with full type checking
 };
 ```
+
+For `openUrl` layers, each clicked feature is expected to expose a string `url` property in its GeoJSON `properties`. If `url` is missing, MapVibe logs a warning in the console and does not open a popup.
 
 
 
