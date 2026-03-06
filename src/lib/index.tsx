@@ -64,6 +64,17 @@ export interface InfoPanelData {
     imageSize?: [number, number];
 }
 
+export interface MapVibeMapHandle {
+    getMap: () => maplibregl.Map | null;
+}
+
+export interface MapVibeMapProps {
+    config: AppConfig,
+    customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
+    mobileCooperativeGestures?: boolean,
+    ref?: React.Ref<MapVibeMapHandle>
+}
+
 // Map Component Props
 interface MapProps {
     mapStyle: any;
@@ -81,94 +92,94 @@ interface MapProps {
     onStyleImageMissing?: (e: any) => void;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
     mobileCooperativeGestures?: boolean;
+    ref?: React.Ref<MapVibeMapHandle>;
 }
 
 // Custom Map Component
-const Map = React.forwardRef<{ getMap: () => maplibregl.Map | null }, MapProps>(
-    ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures }, ref) => {
-        const mapContainer = useRef<HTMLDivElement>(null);
-        const mapInstance = useRef<maplibregl.Map | null>(null);
+const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures, ref }: MapProps) => {
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const mapInstance = useRef<maplibregl.Map | null>(null);
 
-        React.useImperativeHandle(ref, () => ({
-            getMap: () => mapInstance.current
-        }));
+    React.useImperativeHandle(ref, () => ({
+        getMap: () => mapInstance.current
+    }));
 
-        useEffect(() => {
-            if (!mapContainer.current) return;
+    useEffect(() => {
+        if (!mapContainer.current) return;
 
-            // Add custom protocols
-            if (customProtocols) {
-                customProtocols.forEach(protocol => {
-                    maplibregl.addProtocol(protocol.name, protocol.loadFn);
-                });
-            }
-
-            // Create map instance
-            mapInstance.current = new maplibregl.Map({
-                container: mapContainer.current,
-                style: mapStyle,
-                center: initialViewState.center,
-                zoom: initialViewState.zoom,
-                bounds: initialViewState.bounds,
-                attributionControl: attributionControl ? {} : false,
+        // Add custom protocols
+        if (customProtocols) {
+            customProtocols.forEach(protocol => {
+                maplibregl.addProtocol(protocol.name, protocol.loadFn);
             });
+        }
 
-            const map = mapInstance.current;
+        // Create map instance
+        mapInstance.current = new maplibregl.Map({
+            container: mapContainer.current,
+            style: mapStyle,
+            center: initialViewState.center,
+            zoom: initialViewState.zoom,
+            bounds: initialViewState.bounds,
+            attributionControl: attributionControl ? {} : false,
+        });
 
-            if (mobileCooperativeGestures && isMobile()) {
-                // cooperative gestures only on mobile
-                map.cooperativeGestures.enable();
-            }
+        const map = mapInstance.current;
 
-            // disable rotation and pitch shift everywhere
-            map.dragRotate.disable();
-            map.touchZoomRotate.disableRotation();
-            map.touchPitch.disable();
+        if (mobileCooperativeGestures && isMobile()) {
+            // cooperative gestures only on mobile
+            map.cooperativeGestures.enable();
+        }
 
-            // Set up event handlers
-            if (onLoad) {
-                map.on('load', onLoad);
-            }
+        // disable rotation and pitch shift everywhere
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+        map.touchPitch.disable();
 
-            if (onClick) {
-                map.on('click', onClick);
-            }
+        // Set up event handlers
+        if (onLoad) {
+            map.on('load', onLoad);
+        }
 
-            if (onDrag) {
-                map.on('drag', onDrag);
-            }
+        if (onClick) {
+            map.on('click', onClick);
+        }
 
-            if (onDblClick) {
-                map.on('dblclick', onDblClick);
-            }
+        if (onDrag) {
+            map.on('drag', onDrag);
+        }
 
-            if (onStyleImageMissing) {
-                map.on('styleimagemissing', onStyleImageMissing);
-            }
+        if (onDblClick) {
+            map.on('dblclick', onDblClick);
+        }
 
-            return () => {
-                map.remove();
-            };
-        }, []);
+        if (onStyleImageMissing) {
+            map.on('styleimagemissing', onStyleImageMissing);
+        }
 
-        return <div ref={mapContainer} style={style} />;
-    }
-);
+        return () => {
+            map.remove();
+            mapInstance.current = null;
+        };
+    }, []);
+
+    return <div ref={mapContainer} style={style} />;
+};
 
 Map.displayName = 'Map';
 
 // --- REACT COMPONENTS ---
-export const MapVibeMap: React.FC<{
-    config: AppConfig,
-    customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
-    mobileCooperativeGestures?: boolean
-}> = ({ config, customProtocols, mobileCooperativeGestures = true }) => {
-    const mapRef = useRef<{ getMap: () => maplibregl.Map | null }>(null);
+export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, ref }: MapVibeMapProps) => {
+    const mapRef = useRef<MapVibeMapHandle>(null);
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
     const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
+
+    React.useImperativeHandle(ref, () => ({
+        getMap: () => mapRef.current?.getMap() ?? null
+    }), []);
 
     useEffect(() => {
         // Initialize layer states from config
@@ -335,8 +346,6 @@ export const MapVibeMap: React.FC<{
 
                 map.panBy([panX, panY], { duration: 0 });
             }
-
-
         }
     }, [config]);
 
@@ -449,6 +458,8 @@ export const MapVibeMap: React.FC<{
         </div>
     );
 };
+
+MapVibeMap.displayName = 'MapVibeMap';
 
 // Layer Chooser Component
 const LayerChooser: React.FC<{

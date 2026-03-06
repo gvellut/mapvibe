@@ -146,17 +146,50 @@ npm install react react-dom maplibre-gl
 ### Basic Usage
 
 ```tsx
-import { MapVibeApp } from 'mapvibe';
+import { MapVibeMap, type AppConfig } from 'mapvibe';
 import 'mapvibe/style.css';
 
-function App() {
-  return <MapVibeApp />;
+function App({ config }: { config: AppConfig }) {
+  return <MapVibeMap config={config} />;
 }
 ```
 
-The `MapVibeApp` component expects a URL parameter `config` pointing to a configuration JSON file, similar to the standalone website usage.
+`MapVibeMap` is the embeddable component for host applications. If you want the standalone app that reads a `config` URL parameter, use the built website output described earlier in this README.
+
+### Accessing the MapLibre Instance
+
+`MapVibeMap` exposes the underlying `maplibregl.Map` instance through a React ref so the embedding app can wire custom globals such as `window.goto`.
+
+```tsx
+import { createRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { MapVibeMap, type AppConfig, type MapVibeMapHandle } from 'mapvibe';
+import 'mapvibe/style.css';
+
+const mapRef = createRef<MapVibeMapHandle>();
+const root = createRoot(document.getElementById('map')!);
+
+declare global {
+  interface Window {
+    goto?: (lat: number, lon: number) => void;
+  }
+}
+
+window.goto = (lat: number, lon: number) => {
+  mapRef.current?.getMap()?.flyTo({ center: [lon, lat] });
+};
+
+root.render(
+  <MapVibeMap
+    ref={mapRef}
+    config={config}
+  />
+);
+```
 
 ### Importing CSS and Assets
+
+When impoorting the library published on NPM (TBD):
 
 **CSS**: The library exports a compiled CSS file that must be imported in your application:
 
@@ -165,7 +198,7 @@ import 'mapvibe/style.css';
 ```
 
 Alternatively, you can import it in your main CSS file:
-
+ 
 ```css
 @import 'mapvibe/style.css';
 ```
@@ -175,28 +208,23 @@ Alternatively, you can import it in your main CSS file:
 1. If you're using custom marker icons, host them on your server and reference them in your config.json
 2. The default UI icons (layer chooser, close button, fullscreen) are bundled with the CSS
 
-**MapLibre GL CSS**: Don't forget to also import MapLibre GL's CSS for proper map styling:
-
-```tsx
-import 'maplibre-gl/dist/maplibre-gl.css';
-```
-
 ### TypeScript Support
 
 MapVibe is written in TypeScript and includes full type definitions. When using the library in a TypeScript project, you'll get:
 
-- Full autocomplete for the `MapVibeApp` component
+- Full autocomplete for the `MapVibeMap` component
 - Type definitions for configuration interfaces:
   - `AppConfig`
   - `BackgroundLayerConfig`
   - `DataLayerConfig`
   - `CustomUiConfig`
   - `InfoPanelData`
+  - `MapVibeMapHandle`
 
 Example with types:
 
 ```tsx
-import { MapVibeApp, AppConfig } from 'mapvibe';
+import { MapVibeMap, AppConfig } from 'mapvibe';
 import 'mapvibe/style.css';
 
 // TypeScript will provide autocomplete for config structure
