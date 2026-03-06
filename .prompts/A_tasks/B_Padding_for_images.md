@@ -1,0 +1,2 @@
+On top of imageUrl?: and     imageSize?: add an optional imagePadding : 1 number (common padding on all sides) or 4 numbers. Like imageSize can be a string : parse if the case. Be forgiving in the format
+Then apply to image in InfoPanel if padding there. dEfault is 0 padding.

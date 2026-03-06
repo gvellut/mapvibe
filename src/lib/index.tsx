@@ -62,6 +62,7 @@ export interface InfoPanelData {
     description?: string;
     imageUrl?: string;
     imageSize?: [number, number];
+    imagePadding?: [number, number, number, number];
 }
 
 export interface MapVibeMapHandle {
@@ -303,19 +304,15 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             return;
         }
 
-        let imageSize: [number, number] | undefined = undefined;
-        if (typeof properties.imageSize === 'string') {
-            const parts = properties.imageSize.split(',').map(s => parseInt(s.trim(), 10));
-            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                imageSize = [parts[0], parts[1]];
-            }
-        }
+        const imageSize = parseImageSize(properties.imageSize);
+        const imagePadding = parseImagePadding(properties.imagePadding);
 
         setInfoPanelData({
             title: properties.title,
             description: properties.description,
             imageUrl: properties.imageUrl,
-            imageSize: imageSize
+            imageSize: imageSize,
+            imagePadding: imagePadding
         });
         setInfoPanelVisible(true);
 
@@ -523,6 +520,10 @@ const InfoPanel: React.FC<{
     onClose: () => void;
 }> = ({ config, data, onClose }) => {
     const ratio = data.imageSize ? `${data.imageSize[0]} / ${data.imageSize[1]}` : undefined;
+    const imagePadding = formatBoxSpacing(data.imagePadding);
+    const imageStyle: React.CSSProperties = ratio
+        ? { width: '100%', height: '100%', objectFit: 'contain', display: 'block' }
+        : { width: '100%', height: 'auto', display: 'block' };
     return (
         <div
             id="info-panel"
@@ -547,13 +548,16 @@ const InfoPanel: React.FC<{
             <div id="info-panel__content">
                 <div id="info-panel__content-img">
                     {data.imageUrl && (
-                        <div style={{ width: '100%', aspectRatio: ratio }}>
-                            <img
-                                src={data.imageUrl}
-                                alt={data.title || ''}
-                                key={data.imageUrl}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            />
+                        <div style={{ width: '100%', padding: imagePadding, boxSizing: 'border-box' }}>
+                        
+                            <div style={{ width: '100%', aspectRatio: ratio }}>
+                                <img
+                                    src={data.imageUrl}
+                                    alt={data.title || ''}
+                                    key={data.imageUrl}
+                                    style={imageStyle}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -569,6 +573,61 @@ const InfoPanel: React.FC<{
 };
 
 // --- HELPER FUNCTIONS ---
+
+function extractNumericValues(value: unknown): number[] {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? [value] : [];
+    }
+
+    if (Array.isArray(value)) {
+        return value
+            .map(item => typeof item === 'number' ? item : Number(item))
+            .filter(item => Number.isFinite(item));
+    }
+
+    if (typeof value === 'string') {
+        const matches = value.match(/-?\d*\.?\d+/g);
+        if (!matches) {
+            return [];
+        }
+
+        return matches
+            .map(item => Number(item))
+            .filter(item => Number.isFinite(item));
+    }
+
+    return [];
+}
+
+function parseImageSize(value: unknown): [number, number] | undefined {
+    const numbers = extractNumericValues(value);
+    if (numbers.length !== 2 || numbers.some(item => item <= 0)) {
+        return undefined;
+    }
+
+    return [numbers[0], numbers[1]];
+}
+
+function parseImagePadding(value: unknown): [number, number, number, number] | undefined {
+    const numbers = extractNumericValues(value);
+    if (numbers.length === 1 && numbers[0] >= 0) {
+        return [numbers[0], numbers[0], numbers[0], numbers[0]];
+    }
+
+    if (numbers.length === 4 && numbers.every(item => item >= 0)) {
+        return [numbers[0], numbers[1], numbers[2], numbers[3]];
+    }
+
+    return undefined;
+}
+
+function formatBoxSpacing(value?: [number, number, number, number]): string {
+    if (!value) {
+        return '0px';
+    }
+
+    return value.map(item => `${item}px`).join(' ');
+}
 
 function findLayerWithId(layerId: string, config: AppConfig) {
     return (Array.isArray(config.layers) ? config.layers.find((l: any) => l.id === layerId) : undefined) || {};
