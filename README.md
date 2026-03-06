@@ -29,6 +29,14 @@ In `"customUi" > "panel"`,  to recenter marker when it would be covered by info 
 
 To enable cooperativeGestures (`ctrl + scroll` to zoom on desktop + 2 finger pan on mobile), add `cooperativeGestures=y` to URL. That parameter will be removed when opening the map in fullscreen using the fullscreen button.
 
+To remember the last map position, use `rlp=page` or `rlp=domain` in the standalone `/mapvibe` URL:
+- `rlp=page` remembers pan/zoom per host + path
+- `rlp=domain` remembers pan/zoom per host across paths
+- `rlp=1` is the same as `rlp=page`
+- `rlp=0` disables the feature and ignores any saved position
+
+When enabled, the remembered position takes precedence over `center`, `zoom`, `bounds`, and auto-fit-to-data on reload.
+
 ## Usage
 
 - Host the `dist` output (see the doc on [Build](#build)) in folder `/mapvibe`.
@@ -151,11 +159,18 @@ import { MapVibeMap, type AppConfig } from 'mapvibe';
 import 'mapvibe/style.css';
 
 function App({ config }: { config: AppConfig }) {
-  return <MapVibeMap config={config} />;
+  return <MapVibeMap config={config} rememberLastPosition="page" />;
 }
 ```
 
 `MapVibeMap` is the embeddable component for host applications. If you want the standalone app that reads a `config` URL parameter, use the built website output described earlier in this README.
+
+`rememberLastPosition` accepts `false | 0 | true | 1 | "page" | "domain"`.
+- `false` / `0`: disabled, never load saved pan/zoom even if one exists
+- `true` / `1` / `"page"`: remember pan/zoom per host + path
+- `"domain"`: remember pan/zoom per host across paths
+
+When a remembered position exists, it overrides `config.center`, `config.zoom`, `config.bounds`, and the automatic fit-to-sources fallback.
 
 ### Accessing the MapLibre Instance
 

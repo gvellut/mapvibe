@@ -1,6 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import maplibregl, { LngLatBounds, type AddProtocolAction } from 'maplibre-gl';
 import './style.scss';
+import {
+    type RememberLastPositionValue,
+    normalizeRememberLastPosition,
+    loadRememberedViewState,
+    saveRememberedViewState
+} from './rememberLastPosition';
 
 // defined in css: width of map smaller than that : infopanel takes full size
 const INFO_PANEL_DESKTOP_WIDTH = 450;
@@ -74,6 +80,7 @@ export interface MapVibeMapProps {
     config: AppConfig,
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
     mobileCooperativeGestures?: boolean,
+    rememberLastPosition?: RememberLastPositionValue,
     ref?: React.Ref<MapVibeMapHandle>
 }
 
@@ -90,6 +97,7 @@ interface MapProps {
     onLoad?: () => void;
     onClick?: (e: maplibregl.MapMouseEvent) => void;
     onDrag?: () => void;
+    onMoveEnd?: () => void;
     onDblClick?: () => void;
     onStyleImageMissing?: (e: any) => void;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
@@ -98,7 +106,7 @@ interface MapProps {
 }
 
 // Custom Map Component
-const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures, ref }: MapProps) => {
+const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onMoveEnd, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures, ref }: MapProps) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<maplibregl.Map | null>(null);
 
@@ -151,6 +159,10 @@ const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onL
             map.on('drag', onDrag);
         }
 
+        if (onMoveEnd) {
+            map.on('moveend', onMoveEnd);
+        }
+
         if (onDblClick) {
             map.on('dblclick', onDblClick);
         }
@@ -171,13 +183,28 @@ const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onL
 Map.displayName = 'Map';
 
 // --- REACT COMPONENTS ---
-export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, ref }: MapVibeMapProps) => {
+export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, ref }: MapVibeMapProps) => {
     const mapRef = useRef<MapVibeMapHandle>(null);
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
     const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
+    const rememberLastPositionScope = normalizeRememberLastPosition(rememberLastPosition);
+    const rememberedViewState = useMemo(
+        () => loadRememberedViewState(rememberLastPositionScope),
+        [rememberLastPositionScope]
+    );
+    const hasRememberedViewState = Boolean(rememberedViewState);
+    const hasConfiguredCenterZoom = Array.isArray(config.center) && typeof config.zoom === 'number';
+    const hasConfiguredBounds = Array.isArray(config.bounds) && config.bounds.length === 4;
+    const initialViewState = rememberedViewState
+        ? { center: rememberedViewState.center, zoom: rememberedViewState.zoom }
+        : hasConfiguredCenterZoom
+            ? { center: config.center, zoom: config.zoom }
+            : hasConfiguredBounds
+                ? { bounds: config.bounds }
+                : {};
 
     React.useImperativeHandle(ref, () => ({
         getMap: () => mapRef.current?.getMap() ?? null
@@ -269,10 +296,18 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         });
 
         // Fit to bounds if no center/zoom specified or bounds
-        if ((!(config.center && config.zoom) && !config.bounds) && config.sources) {
+        if (!hasRememberedViewState && !hasConfiguredCenterZoom && !hasConfiguredBounds && config.sources) {
             await fitMapToBounds(map, config.sources);
         }
-    }, [config, selectedBackgroundLayer]);
+    }, [config, selectedBackgroundLayer, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
+
+    const onMapMoveEnd = useCallback(() => {
+        const map = mapRef.current?.getMap();
+        if (!map) return;
+
+        const center = map.getCenter();
+        saveRememberedViewState(rememberLastPositionScope, [center.lng, center.lat], map.getZoom());
+    }, [rememberLastPositionScope]);
 
     // Handle map click
     const onMapClick = useCallback((e: maplibregl.MapMouseEvent) => {
@@ -405,17 +440,14 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             <Map
                 ref={mapRef}
                 mapStyle={config as any}
-                initialViewState={{
-                    center: config.center,
-                    zoom: config.zoom,
-                    bounds: config.bounds,
-                }}
+                initialViewState={initialViewState}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
                 mobileCooperativeGestures={mobileCooperativeGestures}
                 onLoad={onMapLoad}
                 onClick={onMapClick}
                 onDrag={() => setLayerChooserVisible(false)}
+                onMoveEnd={onMapMoveEnd}
                 onDblClick={() => {
                     setInfoPanelVisible(false);
                     setLayerChooserVisible(false);
