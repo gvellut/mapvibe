@@ -300,7 +300,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             } else {
                 window.open(featureUrl, '_blank', 'noopener,noreferrer');
             }
-            setInfoPanelVisible(false);
+            // setInfoPanelVisible(false);
             return;
         }
 
@@ -549,7 +549,7 @@ const InfoPanel: React.FC<{
                 <div id="info-panel__content-img">
                     {data.imageUrl && (
                         <div style={{ width: '100%', padding: imagePadding, boxSizing: 'border-box' }}>
-                        
+
                             <div style={{ width: '100%', aspectRatio: ratio }}>
                                 <img
                                     src={data.imageUrl}
