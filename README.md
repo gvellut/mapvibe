@@ -13,6 +13,7 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
     - Set `interactive: true` to make a data layer clickable.
     - Add `openUrl: true` on an interactive data layer to open each clicked feature's `url` property in a new tab instead of showing the info panel.
   - `customUi.panel`: Panel color and width.
+    - Optional `imageSizeIsMax: true` uses each feature's `imageSize` as the maximum image box size in the info panel. Default is `false`, which keeps the current full-width behavior.
   - `customUi.controls`: Which UI controls to show (zoom, scale, layer chooser, fullscreen, attribution).
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
 - Only one background layer should be visible at a time (including load time ie with `layout.visibility: visible`). Other layers follow standard MapLibre definitions.

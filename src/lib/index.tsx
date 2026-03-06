@@ -26,6 +26,7 @@ export interface CustomUiConfig {
     panel: {
         backgroundColor: string;
         width: string;
+        imageSizeIsMax?: boolean;
         recenterOnOpen?: boolean;
         marginRecenterOnOpen?: number;
     };
@@ -521,6 +522,18 @@ const InfoPanel: React.FC<{
 }> = ({ config, data, onClose }) => {
     const ratio = data.imageSize ? `${data.imageSize[0]} / ${data.imageSize[1]}` : undefined;
     const imagePadding = formatBoxSpacing(data.imagePadding);
+    const imageContainerStyle: React.CSSProperties = config.imageSizeIsMax && data.imageSize
+        ? {
+            width: '100%',
+            maxWidth: `${data.imageSize[0]}px`,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            aspectRatio: ratio
+        }
+        : {
+            width: '100%',
+            aspectRatio: ratio
+        };
     const imageStyle: React.CSSProperties = ratio
         ? { width: '100%', height: '100%', objectFit: 'contain', display: 'block' }
         : { width: '100%', height: 'auto', display: 'block' };
@@ -549,8 +562,7 @@ const InfoPanel: React.FC<{
                 <div id="info-panel__content-img">
                     {data.imageUrl && (
                         <div style={{ width: '100%', padding: imagePadding, boxSizing: 'border-box' }}>
-
-                            <div style={{ width: '100%', aspectRatio: ratio }}>
+                            <div style={imageContainerStyle}>
                                 <img
                                     src={data.imageUrl}
                                     alt={data.title || ''}
