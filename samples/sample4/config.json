@@ -69,7 +69,7 @@
             "type": "raster",
             "source": "ign-plan",
             "layout": {
-                "visibility": "visible"
+                "visibility": "none"
             }
         },
         {
@@ -166,7 +166,7 @@
         "imports": [
             {
                 "id": "shortbread",
-                "url": "https://map.atownsend.org.uk/vector/style_osmf_shortbread.json"
+                "url": "https://tiles.openfreemap.org/styles/liberty"
             }
         ],
         "groups": [
@@ -181,12 +181,12 @@
         "backgroundLayers": [
             {
                 "id": "shortbread",
-                "name": "Shortbread",
+                "name": "Liberty",
                 "visible": true
             },
             {
                 "id": "shortbread-routes",
-                "name": "Shortbread + Routes"
+                "name": "Liberty + Routes"
             },
             {
                 "id": "osm-background",

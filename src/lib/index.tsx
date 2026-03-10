@@ -1033,17 +1033,6 @@ function getBackgroundZoomBounds(
     const layerIds = getBackgroundLayerIds(backgroundId, catalog, runtime);
 
     for (const layerId of layerIds) {
-        const importInfo = findImportForLayerId(runtime, layerId);
-        if (importInfo) {
-            const layerDefinition = importInfo.layerDefinitions.get(layerId);
-            const sourceName = layerDefinition?.source;
-            const sourceDef = sourceName ? importInfo.sourceDefinitions.get(sourceName) : undefined;
-            if (sourceDef) {
-                return getClampedZoomBounds(sourceDef, chooserConfig);
-            }
-            continue;
-        }
-
         const layerDefinition = catalog.topLayerDefinitions.get(layerId);
         const sourceName = layerDefinition?.source;
         const sourceDef = sourceName ? catalog.topSourceDefinitions[sourceName] : undefined;
@@ -1327,19 +1316,39 @@ function rewriteResolvedImageValue(value: any, spriteMapping: SpriteMapping): an
         }
 
         const nextValue = [...value];
-        nextValue[1] = prefixStringExpression(nextValue[1], spriteMapping);
+        nextValue[1] = rewriteResolvedImageStringExpression(nextValue[1], spriteMapping);
         return nextValue;
+    }
+
+    if (operator === 'step') {
+        return rewriteStepResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
+    }
+
+    if (operator === 'interpolate') {
+        return rewriteInterpolateResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
+    }
+
+    if (operator === 'case') {
+        return rewriteCaseResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
+    }
+
+    if (operator === 'match') {
+        return rewriteMatchResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
+    }
+
+    if (operator === 'coalesce') {
+        return rewriteCoalesceResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
+    }
+
+    if (operator === 'let') {
+        return rewriteLetResolvedImageExpression(value, spriteMapping, rewriteResolvedImageValue);
     }
 
     if (expressionContainsOperator(value, 'image')) {
         return rewriteNestedResolvedImageExpression(value, spriteMapping);
     }
 
-    if (!spriteMapping.defaultSpriteId) {
-        return value;
-    }
-
-    return ['image', prependToStringExpression(`${spriteMapping.defaultSpriteId}:`, value)];
+    return prefixStringExpression(value, spriteMapping);
 }
 
 function rewriteNestedResolvedImageExpression(value: any, spriteMapping: SpriteMapping): any {
@@ -1354,11 +1363,155 @@ function rewriteNestedResolvedImageExpression(value: any, spriteMapping: SpriteM
         }
 
         const nextValue = [...value];
-        nextValue[1] = prefixStringExpression(nextValue[1], spriteMapping);
+        nextValue[1] = rewriteResolvedImageStringExpression(nextValue[1], spriteMapping);
         return nextValue;
     }
 
     return value.map((item) => Array.isArray(item) ? rewriteNestedResolvedImageExpression(item, spriteMapping) : item);
+}
+
+function rewriteResolvedImageStringExpression(value: any, spriteMapping: SpriteMapping): any {
+    if (typeof value === 'string') {
+        return prefixImageStringReference(value, spriteMapping);
+    }
+
+    if (!Array.isArray(value)) {
+        return value;
+    }
+
+    const operator = typeof value[0] === 'string' ? value[0] : undefined;
+    if (operator === 'step') {
+        return rewriteStepResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    if (operator === 'interpolate') {
+        return rewriteInterpolateResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    if (operator === 'case') {
+        return rewriteCaseResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    if (operator === 'match') {
+        return rewriteMatchResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    if (operator === 'coalesce') {
+        return rewriteCoalesceResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    if (operator === 'let') {
+        return rewriteLetResolvedImageExpression(value, spriteMapping, rewriteResolvedImageStringExpression);
+    }
+
+    return prefixStringExpression(value, spriteMapping);
+}
+
+function rewriteStepResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 3) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    nextValue[2] = rewriteValue(nextValue[2], spriteMapping);
+
+    for (let index = 4; index < nextValue.length; index += 2) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    return nextValue;
+}
+
+function rewriteInterpolateResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 5) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    for (let index = 4; index < nextValue.length; index += 2) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    return nextValue;
+}
+
+function rewriteCaseResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 2) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    for (let index = 2; index < nextValue.length - 1; index += 2) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    nextValue[nextValue.length - 1] = rewriteValue(nextValue[nextValue.length - 1], spriteMapping);
+    return nextValue;
+}
+
+function rewriteMatchResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 3) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    for (let index = 3; index < nextValue.length - 1; index += 2) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    nextValue[nextValue.length - 1] = rewriteValue(nextValue[nextValue.length - 1], spriteMapping);
+    return nextValue;
+}
+
+function rewriteCoalesceResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 2) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    for (let index = 1; index < nextValue.length; index += 1) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    return nextValue;
+}
+
+function rewriteLetResolvedImageExpression(
+    value: any[],
+    spriteMapping: SpriteMapping,
+    rewriteValue: (branchValue: any, branchSpriteMapping: SpriteMapping) => any
+): any {
+    if (value.length < 2) {
+        return value;
+    }
+
+    const nextValue = [...value];
+    for (let index = 2; index < nextValue.length - 1; index += 2) {
+        nextValue[index] = rewriteValue(nextValue[index], spriteMapping);
+    }
+
+    nextValue[nextValue.length - 1] = rewriteValue(nextValue[nextValue.length - 1], spriteMapping);
+    return nextValue;
 }
 
 function expressionContainsOperator(value: any, operator: string): boolean {
@@ -1386,6 +1539,10 @@ function prefixStringExpression(value: any, spriteMapping: SpriteMapping): any {
 }
 
 function prefixImageStringReference(value: string, spriteMapping: SpriteMapping): any {
+    if (value === '') {
+        return value;
+    }
+
     const resolvedReference = resolveSpriteReference(value, spriteMapping);
     if (!resolvedReference) {
         return value;

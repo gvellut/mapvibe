@@ -3,3 +3,4 @@
 ! [Add imageSizeIsMax setting in config](A_tasks/C_Add_imageSizeIsMax_setting_in_config.md)
 ! [Enable save + loading last position](A_tasks/D_Enable_save_loading_last_position.md)
 ! [Imports mpabox style](A_tasks/E_Imports_mapbox_style.md)
+! [Correction imports](A_tasks/F_Correction_imports.md)
