@@ -22,6 +22,7 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
     - Add `openUrl: true` on an interactive data layer to open each clicked feature's `url` property in a new tab instead of showing the info panel.
   - `customUi.panel`: Panel color and width.
     - Optional `imageSizeIsMax: true` uses each feature's `imageSize` as the maximum image box size in the info panel. Default is `false`, which keeps the current full-width behavior.
+    - Info panel features can also provide `imageBackgroundColor` as a hex color string such as `#000000` to fill the image wrapper behind the image.
   - `customUi.controls`: Which UI controls to show (zoom, scale, layer chooser, fullscreen, attribution).
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
 - On startup, MapVibe hides all top-style layers first, then applies visibility from `customUi.backgroundLayers` and `customUi.dataLayers`. Raw top-style `layout.visibility` does not control initial visibility.

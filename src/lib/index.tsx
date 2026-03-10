@@ -101,6 +101,7 @@ export interface InfoPanelData {
     title?: string;
     description?: string;
     imageUrl?: string;
+    imageBackgroundColor?: string;
     imageSize?: [number, number];
     imagePadding?: [number, number, number, number];
 }
@@ -477,6 +478,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             title: properties.title,
             description: properties.description,
             imageUrl: properties.imageUrl,
+            imageBackgroundColor: properties.imageBackgroundColor,
             imageSize: imageSize,
             imagePadding: imagePadding
         });
@@ -697,7 +699,7 @@ const InfoPanel: React.FC<{
             <div id="info-panel__content">
                 <div id="info-panel__content-img">
                     {data.imageUrl && (
-                        <div style={{ width: '100%', padding: imagePadding, boxSizing: 'border-box' }}>
+                        <div style={{ width: '100%', padding: imagePadding, boxSizing: 'border-box', backgroundColor: data.imageBackgroundColor }}>
                             <div style={imageContainerStyle}>
                                 <img
                                     src={data.imageUrl}

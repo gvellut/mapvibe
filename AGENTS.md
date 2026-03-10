@@ -45,3 +45,8 @@ Mapvibe config files are based on the MapLibre style JSON format, but they also 
 ## AGENTS.md
 
 When finishing the work, update this AGENTS.md with consideration for future work. Add or remove (if no longer relevant) depending on the outcome of the work.
+
+## Recent Notes
+
+- `InfoPanelData` now supports an optional `imageBackgroundColor` string copied from interactive feature properties, alongside `imageUrl`, `imageSize`, and `imagePadding`.
+- The info panel applies `imageBackgroundColor` to the outer image wrapper div, so GeoJSON feature properties can control the fill behind contained images.
