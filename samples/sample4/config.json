@@ -169,40 +169,51 @@
                 "url": "https://tiles.openfreemap.org/styles/liberty"
             }
         ],
-        "groups": [
-            {
-                "id": "shortbread-routes",
-                "layerIds": [
-                    "shortbread",
-                    "bike-routes-layer"
-                ]
-            }
-        ],
         "backgroundLayers": [
             {
                 "id": "shortbread",
                 "name": "Liberty",
-                "visible": true
+                "layerIds": [
+                    "shortbread"
+                ],
+                "visible": false
             },
             {
                 "id": "shortbread-routes",
-                "name": "Liberty + Routes"
+                "name": "Liberty + Routes",
+                "layerIds": [
+                    "shortbread",
+                    "bike-routes-layer"
+                ]
             },
             {
                 "id": "osm-background",
-                "name": "Street Map"
+                "name": "Street Map",
+                "layerIds": [
+                    "osm-background"
+                ],
+                "visible": true
             },
             {
                 "id": "ign-plan",
-                "name": "Plan IGN"
+                "name": "Plan IGN",
+                "layerIds": [
+                    "ign-plan"
+                ]
             },
             {
                 "id": "ign-ortho",
-                "name": "Aerial IGN"
+                "name": "Aerial IGN",
+                "layerIds": [
+                    "ign-ortho"
+                ]
             },
             {
                 "id": "open-topo-map",
-                "name": "OpenTopoMap"
+                "name": "OpenTopoMap",
+                "layerIds": [
+                    "open-topo-map"
+                ]
             }
         ],
         "dataLayers": [

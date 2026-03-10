@@ -1,7 +1,7 @@
-- [Modify groups](A_tasks/G_Modify_groups.md)
 ! [Add url click support](A_tasks/A_Add_url_click_support.md)
 ! [Padding for images](A_tasks/B_Padding_for_images.md)
 ! [Add imageSizeIsMax setting in config](A_tasks/C_Add_imageSizeIsMax_setting_in_config.md)
 ! [Enable save + loading last position](A_tasks/D_Enable_save_loading_last_position.md)
 ! [Imports mpabox style](A_tasks/E_Imports_mapbox_style.md)
 ! [Correction imports](A_tasks/F_Correction_imports.md)
+! [Modify groups](A_tasks/G_Modify_groups.md)

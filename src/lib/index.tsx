@@ -28,6 +28,7 @@ type SpriteConfig = string | Array<{ id: string; url: string }> | undefined;
 export interface BackgroundLayerConfig {
     id: string;
     name: string;
+    layerIds: string[];
     visible?: boolean;
 }
 
@@ -36,15 +37,11 @@ export interface StyleImportConfig {
     url: string;
 }
 
-export interface BackgroundGroupConfig {
-    id: string;
-    layerIds: string[];
-}
-
 export interface DataLayerConfig {
     id: string;
     name: string;
     layerIds: string[];
+    visible?: boolean;
     interactive?: boolean;
     openUrl?: boolean;
 }
@@ -65,7 +62,6 @@ export interface CustomUiConfig {
         attribution?: boolean;
     };
     imports?: StyleImportConfig[];
-    groups?: BackgroundGroupConfig[];
     backgroundLayers: BackgroundLayerConfig[];
     dataLayers: DataLayerConfig[];
     globalMinZoom?: number;
@@ -157,15 +153,17 @@ interface MapProps {
     ref?: React.Ref<MapInstanceHandle>;
 }
 
-interface BackgroundTargetDefinition {
+interface BackgroundLayerDefinition {
     id: string;
-    type: 'layer' | 'import' | 'group';
-    memberIds?: string[];
+    memberIds: string[];
 }
 
 interface BackgroundCatalog {
     backgroundEntries: BackgroundLayerConfig[];
-    definitions: Map<string, BackgroundTargetDefinition>;
+    backgroundDefinitions: Map<string, BackgroundLayerDefinition>;
+    dataLayerEntries: DataLayerConfig[];
+    dataLayerConfigs: Map<string, DataLayerConfig>;
+    clickableLayerIds: string[];
     importConfigs: Map<string, StyleImportConfig>;
     topLayerDefinitions: Map<string, any>;
     topSourceDefinitions: Record<string, any>;
@@ -283,6 +281,7 @@ MapCanvas.displayName = 'MapCanvas';
 // --- REACT COMPONENTS ---
 export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, ref }: MapVibeMapProps) => {
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
+    const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);
     backgroundCatalogRef.current = backgroundCatalog;
 
@@ -298,6 +297,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState(backgroundCatalog.initialSelection);
     const selectedBackgroundLayerRef = useRef(backgroundCatalog.initialSelection);
     const [visibleDataLayers, setVisibleDataLayers] = useState(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+    const visibleDataLayersRef = useRef(new Set(backgroundCatalog.initialVisibleDataLayerIds));
 
     const rememberLastPositionScope = normalizeRememberLastPosition(rememberLastPosition);
     const rememberedViewState = useMemo(
@@ -320,8 +320,13 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
     }, [selectedBackgroundLayer]);
 
     useEffect(() => {
+        visibleDataLayersRef.current = visibleDataLayers;
+    }, [visibleDataLayers]);
+
+    useEffect(() => {
         backgroundRuntimeRef.current = createBackgroundRuntimeState();
         selectedBackgroundLayerRef.current = backgroundCatalog.initialSelection;
+        visibleDataLayersRef.current = new Set(backgroundCatalog.initialVisibleDataLayerIds);
         setSelectedBackgroundLayer(backgroundCatalog.initialSelection);
         setVisibleDataLayers(new Set(backgroundCatalog.initialVisibleDataLayerIds));
     }, [backgroundCatalog]);
@@ -387,6 +392,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             backgroundRuntimeRef.current,
             currentConfig.customUi
         );
+        applyDataLayerVisibilitySelection(map, backgroundCatalogRef.current, visibleDataLayersRef.current);
 
         if (currentConfig.customUi?.controls?.scale) {
             map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
@@ -414,7 +420,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
         }
 
-        const clickableLayerIds = getClickableLayerIds(currentConfig);
+        const clickableLayerIds = backgroundCatalogRef.current.clickableLayerIds;
         map.on('mousemove', (e) => {
             const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
             map.getCanvas().style.cursor = features.length ? 'pointer' : '';
@@ -442,7 +448,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
 
         setLayerChooserVisible(false);
 
-        const clickableLayerIds = getClickableLayerIds(currentConfig);
+        const clickableLayerIds = backgroundCatalogRef.current.clickableLayerIds;
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
 
         if (!features.length) {
@@ -452,7 +458,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
 
         const feature = features[0];
         const properties = feature.properties;
-        const dataLayer = getDataLayerForMapLayerId(currentConfig, feature.layer.id);
+        const dataLayer = getDataLayerForMapLayerId(backgroundCatalogRef.current, feature.layer.id);
 
         if (dataLayer?.openUrl) {
             const featureUrl = typeof properties?.url === 'string' ? properties.url : undefined;
@@ -510,8 +516,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
 
     const handleDataLayerToggle = useCallback((dataLayerId: string, visible: boolean) => {
         const map = mapRef.current?.getMap();
-        const currentConfig = configRef.current;
-        if (!map || !currentConfig) return;
+        const dataLayer = backgroundCatalogRef.current.dataLayerConfigs.get(dataLayerId);
+        if (!map || !dataLayer) return;
 
         setVisibleDataLayers(previous => {
             const next = new Set(previous);
@@ -520,17 +526,11 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             } else {
                 next.delete(dataLayerId);
             }
+            visibleDataLayersRef.current = next;
             return next;
         });
 
-        const dataLayer = currentConfig.customUi.dataLayers.find((layer: DataLayerConfig) => layer.id === dataLayerId);
-        if (dataLayer) {
-            dataLayer.layerIds.forEach(layerId => {
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
-                }
-            });
-        }
+        setDataLayerVisibility(map, dataLayer, visible);
     }, []);
 
     useEffect(() => {
@@ -546,7 +546,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <MapCanvas
                 ref={mapRef}
-                mapStyle={config as any}
+                mapStyle={initialMapStyle as any}
                 initialViewState={initialViewState}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
@@ -567,7 +567,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 <>
                     {config.customUi.controls.layerChooser && (
                         <LayerChooser
-                            config={config}
+                            backgroundLayers={backgroundCatalog.backgroundEntries}
+                            dataLayers={backgroundCatalog.dataLayerEntries}
                             visible={layerChooserVisible}
                             onToggle={() => {
                                 setLayerChooserVisible(!layerChooserVisible);
@@ -597,14 +598,15 @@ MapVibeMap.displayName = 'MapVibeMap';
 
 // Layer Chooser Component
 const LayerChooser: React.FC<{
-    config: AppConfig;
+    backgroundLayers: BackgroundLayerConfig[];
+    dataLayers: DataLayerConfig[];
     visible: boolean;
     onToggle: () => void;
     selectedBackgroundLayer: string;
     visibleDataLayers: Set<string>;
     onBackgroundLayerChange: (layerId: string) => void;
     onDataLayerToggle: (layerId: string, visible: boolean) => void;
-}> = ({ config, visible, onToggle, selectedBackgroundLayer, visibleDataLayers, onBackgroundLayerChange, onDataLayerToggle }) => {
+}> = ({ backgroundLayers, dataLayers, visible, onToggle, selectedBackgroundLayer, visibleDataLayers, onBackgroundLayerChange, onDataLayerToggle }) => {
     return (
         <div className="maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser"
             style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000 }}>
@@ -617,7 +619,7 @@ const LayerChooser: React.FC<{
             {visible && (
                 <div className="layer-chooser-panel visible">
                     <h4>Background Layers</h4>
-                    {config.customUi.backgroundLayers.map((layer) => (
+                    {backgroundLayers.map((layer) => (
                         <div key={layer.id}>
                             <input
                                 type="radio"
@@ -631,7 +633,7 @@ const LayerChooser: React.FC<{
                     ))}
 
                     <h4>Data Layers</h4>
-                    {config.customUi.dataLayers.map((layer) => (
+                    {dataLayers.map((layer) => (
                         <div key={layer.id}>
                             <input
                                 type="checkbox"
@@ -727,13 +729,38 @@ function createBackgroundRuntimeState(): BackgroundRuntimeState {
     };
 }
 
+function createInitialMapStyle(config: AppConfig): AppConfig {
+    const initialMapStyle = cloneJson(config);
+
+    if (Array.isArray(initialMapStyle.layers)) {
+        initialMapStyle.layers = initialMapStyle.layers.map((layer: any) => {
+            if (!layer || typeof layer !== 'object') {
+                return layer;
+            }
+
+            return {
+                ...layer,
+                layout: {
+                    ...(layer.layout ?? {}),
+                    visibility: 'none'
+                }
+            };
+        });
+    }
+
+    return initialMapStyle;
+}
+
 function buildBackgroundCatalog(config: AppConfig): BackgroundCatalog {
     const topLayerDefinitions = new Map<string, any>();
-    const definitions = new Map<string, BackgroundTargetDefinition>();
     const importConfigs = new Map<string, StyleImportConfig>();
-    const backgroundEntries = Array.isArray(config.customUi?.backgroundLayers) ? config.customUi.backgroundLayers : [];
-    const groupConfigs = Array.isArray(config.customUi?.groups) ? config.customUi.groups : [];
+    const backgroundDefinitions = new Map<string, BackgroundLayerDefinition>();
+    const backgroundEntries: BackgroundLayerConfig[] = [];
+    const dataLayerEntries: DataLayerConfig[] = [];
+    const dataLayerConfigs = new Map<string, DataLayerConfig>();
     const importEntries = Array.isArray(config.customUi?.imports) ? config.customUi.imports : [];
+    const rawBackgroundEntries = Array.isArray(config.customUi?.backgroundLayers) ? config.customUi.backgroundLayers : [];
+    const rawDataLayerEntries = Array.isArray(config.customUi?.dataLayers) ? config.customUi.dataLayers : [];
     const layers = Array.isArray(config.layers) ? config.layers : [];
 
     for (const layer of layers) {
@@ -747,7 +774,6 @@ function buildBackgroundCatalog(config: AppConfig): BackgroundCatalog {
         }
 
         topLayerDefinitions.set(layer.id, layer);
-        definitions.set(layer.id, { id: layer.id, type: 'layer' });
     }
 
     for (const importConfig of importEntries) {
@@ -756,68 +782,126 @@ function buildBackgroundCatalog(config: AppConfig): BackgroundCatalog {
             continue;
         }
 
-        if (definitions.has(importConfig.id)) {
+        if (topLayerDefinitions.has(importConfig.id) || importConfigs.has(importConfig.id)) {
             console.warn(`Ignoring imported style "${importConfig.id}" because that id is already used elsewhere in the style.`);
             continue;
         }
 
         importConfigs.set(importConfig.id, importConfig);
-        definitions.set(importConfig.id, { id: importConfig.id, type: 'import' });
     }
 
-    for (const group of groupConfigs) {
-        if (!group || typeof group.id !== 'string' || !Array.isArray(group.layerIds)) {
-            console.warn('Ignoring invalid customUi.groups entry because it is missing a string id or layerIds array.', group);
+    for (const backgroundEntry of rawBackgroundEntries) {
+        if (!backgroundEntry || typeof backgroundEntry.id !== 'string' || typeof backgroundEntry.name !== 'string' || !Array.isArray(backgroundEntry.layerIds)) {
+            console.warn('Ignoring invalid customUi.backgroundLayers entry because it is missing a string id, string name, or layerIds array.', backgroundEntry);
             continue;
         }
 
-        if (definitions.has(group.id)) {
-            console.warn(`Ignoring background group "${group.id}" because that id is already used elsewhere in the style.`);
+        if (backgroundDefinitions.has(backgroundEntry.id)) {
+            console.warn(`Ignoring duplicate customUi.backgroundLayers entry "${backgroundEntry.id}".`);
             continue;
         }
 
-        const validMembers = uniqueInOrder(group.layerIds.filter((layerId): layerId is string => typeof layerId === 'string').filter((layerId) => {
-            if (topLayerDefinitions.has(layerId) || importConfigs.has(layerId)) {
-                return true;
-            }
+        const resolvedLayerIds = uniqueInOrder(
+            backgroundEntry.layerIds
+                .filter((layerId): layerId is string => typeof layerId === 'string')
+                .filter((layerId) => {
+                    if (topLayerDefinitions.has(layerId) || importConfigs.has(layerId)) {
+                        return true;
+                    }
 
-            if (groupConfigs.some((candidate) => candidate?.id === layerId)) {
-                console.warn(`Ignoring nested background group reference "${layerId}" inside group "${group.id}". Nested groups are not supported.`);
-                return false;
-            }
+                    console.warn(`Ignoring unknown background layer member "${layerId}" inside background layer "${backgroundEntry.id}".`);
+                    return false;
+                })
+        );
 
-            console.warn(`Ignoring unknown background group member "${layerId}" inside group "${group.id}".`);
-            return false;
-        }));
+        const normalizedBackgroundEntry = {
+            ...backgroundEntry,
+            layerIds: resolvedLayerIds
+        };
 
-        definitions.set(group.id, {
-            id: group.id,
-            type: 'group',
-            memberIds: validMembers
+        backgroundEntries.push(normalizedBackgroundEntry);
+        backgroundDefinitions.set(normalizedBackgroundEntry.id, {
+            id: normalizedBackgroundEntry.id,
+            memberIds: normalizedBackgroundEntry.layerIds
         });
     }
 
+    for (const dataLayer of rawDataLayerEntries) {
+        if (!dataLayer || typeof dataLayer.id !== 'string' || typeof dataLayer.name !== 'string' || !Array.isArray(dataLayer.layerIds)) {
+            console.warn('Ignoring invalid customUi.dataLayers entry because it is missing a string id, string name, or layerIds array.', dataLayer);
+            continue;
+        }
+
+        if (dataLayerConfigs.has(dataLayer.id)) {
+            console.warn(`Ignoring duplicate customUi.dataLayers entry "${dataLayer.id}".`);
+            continue;
+        }
+
+        const resolvedLayerIds = uniqueInOrder(
+            dataLayer.layerIds
+                .filter((layerId): layerId is string => typeof layerId === 'string')
+                .filter((layerId) => {
+                    if (topLayerDefinitions.has(layerId)) {
+                        return true;
+                    }
+
+                    console.warn(`Ignoring unknown data layer member "${layerId}" inside data layer "${dataLayer.id}".`);
+                    return false;
+                })
+        );
+
+        const normalizedDataLayer = {
+            ...dataLayer,
+            layerIds: resolvedLayerIds
+        };
+
+        dataLayerEntries.push(normalizedDataLayer);
+        dataLayerConfigs.set(normalizedDataLayer.id, normalizedDataLayer);
+    }
+
+    const backgroundManagedLayerIds = new Set<string>();
+    const overlappingLayerIds = new Set<string>();
+
     for (const backgroundEntry of backgroundEntries) {
-        if (!definitions.has(backgroundEntry.id)) {
-            console.warn(`Background layer "${backgroundEntry.id}" does not match a top-level layer, import, or group.`);
+        for (const layerId of backgroundEntry.layerIds) {
+            if (topLayerDefinitions.has(layerId)) {
+                backgroundManagedLayerIds.add(layerId);
+            }
+        }
+    }
+
+    for (const dataLayer of dataLayerEntries) {
+        for (const layerId of dataLayer.layerIds) {
+            if (backgroundManagedLayerIds.has(layerId)) {
+                overlappingLayerIds.add(layerId);
+            }
+        }
+    }
+
+    if (overlappingLayerIds.size > 0) {
+        console.warn(
+            `Top-style layers ${[...overlappingLayerIds].map((layerId) => `"${layerId}"`).join(', ')} are referenced by both customUi.backgroundLayers and customUi.dataLayers. This configuration is unsupported, and those layer ids will be ignored.`
+        );
+
+        for (const backgroundEntry of backgroundEntries) {
+            const filteredLayerIds = backgroundEntry.layerIds.filter((layerId) => !overlappingLayerIds.has(layerId));
+            backgroundEntry.layerIds = filteredLayerIds;
+            const definition = backgroundDefinitions.get(backgroundEntry.id);
+            if (definition) {
+                definition.memberIds = filteredLayerIds;
+            }
+        }
+
+        for (const dataLayer of dataLayerEntries) {
+            dataLayer.layerIds = dataLayer.layerIds.filter((layerId) => !overlappingLayerIds.has(layerId));
         }
     }
 
     const managedTopLayerIds = new Set<string>();
     for (const backgroundEntry of backgroundEntries) {
-        if (topLayerDefinitions.has(backgroundEntry.id)) {
-            managedTopLayerIds.add(backgroundEntry.id);
-        }
-    }
-
-    for (const definition of definitions.values()) {
-        if (definition.type !== 'group') {
-            continue;
-        }
-
-        for (const memberId of definition.memberIds ?? []) {
-            if (topLayerDefinitions.has(memberId)) {
-                managedTopLayerIds.add(memberId);
+        for (const layerId of backgroundEntry.layerIds) {
+            if (topLayerDefinitions.has(layerId)) {
+                managedTopLayerIds.add(layerId);
             }
         }
     }
@@ -826,19 +910,26 @@ function buildBackgroundCatalog(config: AppConfig): BackgroundCatalog {
 
     return {
         backgroundEntries,
-        definitions,
+        backgroundDefinitions,
+        dataLayerEntries,
+        dataLayerConfigs,
+        clickableLayerIds: uniqueInOrder(
+            dataLayerEntries
+                .filter((dataLayer) => dataLayer.interactive)
+                .flatMap((dataLayer) => dataLayer.layerIds)
+        ),
         importConfigs,
         topLayerDefinitions,
         topSourceDefinitions: config.sources ?? {},
         managedTopLayerIds,
         overlayBoundaryId,
-        initialSelection: determineInitialBackgroundSelection(backgroundEntries, topLayerDefinitions),
-        initialVisibleDataLayerIds: getInitialVisibleDataLayerIds(config),
+        initialSelection: determineInitialBackgroundSelection(backgroundEntries),
+        initialVisibleDataLayerIds: getInitialVisibleDataLayerIds(dataLayerEntries),
         topStyleGlyphsUrl: config.glyphs
     };
 }
 
-function determineInitialBackgroundSelection(backgroundEntries: BackgroundLayerConfig[], topLayerDefinitions: Map<string, any>): string {
+function determineInitialBackgroundSelection(backgroundEntries: BackgroundLayerConfig[]): string {
     const explicitlyVisibleEntries = backgroundEntries.filter((layer) => layer.visible);
     if (explicitlyVisibleEntries.length > 1) {
         console.warn(`Multiple backgroundLayers entries declare "visible: true". Using "${explicitlyVisibleEntries[0].id}".`);
@@ -847,31 +938,13 @@ function determineInitialBackgroundSelection(backgroundEntries: BackgroundLayerC
         return explicitlyVisibleEntries[0].id;
     }
 
-    const configuredVisibleLayer = backgroundEntries.find((layer) => {
-        const layerDefinition = topLayerDefinitions.get(layer.id);
-        return layerDefinition && layerDefinition.layout?.visibility !== 'none';
-    });
-
-    if (configuredVisibleLayer) {
-        return configuredVisibleLayer.id;
-    }
-
     return backgroundEntries[0]?.id ?? '';
 }
 
-function getInitialVisibleDataLayerIds(config: AppConfig): Set<string> {
+function getInitialVisibleDataLayerIds(dataLayerEntries: DataLayerConfig[]): Set<string> {
     const visibleData = new Set<string>();
-    if (!config.customUi?.dataLayers) {
-        return visibleData;
-    }
-
-    config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
-        const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
-            const layerDef = Array.isArray(config.layers) ? config.layers.find((layer: any) => layer.id === layerId) : undefined;
-            return layerDef && layerDef.layout?.visibility !== 'none';
-        });
-
-        if (hasVisibleLayers) {
+    dataLayerEntries.forEach((dataLayer: DataLayerConfig) => {
+        if (dataLayer.visible !== false) {
             visibleData.add(dataLayer.id);
         }
     });
@@ -900,23 +973,23 @@ function getBackgroundLayerIds(backgroundId: string, catalog: BackgroundCatalog,
 }
 
 function resolveBackgroundLayerIds(backgroundId: string, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState): string[] {
-    const definition = catalog.definitions.get(backgroundId);
+    const definition = catalog.backgroundDefinitions.get(backgroundId);
     if (!definition) {
         return [];
     }
 
-    if (definition.type === 'layer') {
-        return catalog.topLayerDefinitions.has(backgroundId) ? [backgroundId] : [];
-    }
-
-    if (definition.type === 'import') {
-        return runtime.imports.get(backgroundId)?.layerIds ?? [];
-    }
-
     const layerIds: string[] = [];
-    for (const memberId of definition.memberIds ?? []) {
-        layerIds.push(...resolveBackgroundLayerIds(memberId, catalog, runtime));
+    for (const memberId of definition.memberIds) {
+        if (catalog.topLayerDefinitions.has(memberId)) {
+            layerIds.push(memberId);
+            continue;
+        }
+
+        if (catalog.importConfigs.has(memberId)) {
+            layerIds.push(...(runtime.imports.get(memberId)?.layerIds ?? []));
+        }
     }
+
     return layerIds;
 }
 
@@ -964,6 +1037,24 @@ function applyBackgroundSelection(
     }
 }
 
+function applyDataLayerVisibilitySelection(
+    map: maplibregl.Map,
+    catalog: BackgroundCatalog,
+    visibleDataLayerIds: Set<string>
+) {
+    for (const dataLayer of catalog.dataLayerEntries) {
+        setDataLayerVisibility(map, dataLayer, visibleDataLayerIds.has(dataLayer.id));
+    }
+}
+
+function setDataLayerVisibility(map: maplibregl.Map, dataLayer: DataLayerConfig, visible: boolean) {
+    dataLayer.layerIds.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+        }
+    });
+}
+
 function hideAllManagedBackgroundTargets(map: maplibregl.Map, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState) {
     for (const layerId of catalog.managedTopLayerIds) {
         if (map.getLayer(layerId)) {
@@ -995,21 +1086,13 @@ function findImportForLayerId(runtime: BackgroundRuntimeState, layerId: string):
 }
 
 function resolveBackgroundGlyphsUrl(backgroundId: string, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState): string | undefined {
-    const definition = catalog.definitions.get(backgroundId);
+    const definition = catalog.backgroundDefinitions.get(backgroundId);
     if (!definition) {
         return catalog.topStyleGlyphsUrl;
     }
 
-    if (definition.type === 'import') {
-        return runtime.imports.get(backgroundId)?.glyphsUrl ?? catalog.topStyleGlyphsUrl;
-    }
-
-    if (definition.type !== 'group') {
-        return catalog.topStyleGlyphsUrl;
-    }
-
     const glyphUrls: string[] = [];
-    for (const memberId of definition.memberIds ?? []) {
+    for (const memberId of definition.memberIds) {
         const importInfo = runtime.imports.get(memberId);
         if (importInfo?.glyphsUrl) {
             glyphUrls.push(importInfo.glyphsUrl);
@@ -1018,7 +1101,7 @@ function resolveBackgroundGlyphsUrl(backgroundId: string, catalog: BackgroundCat
 
     const distinctGlyphUrls = uniqueInOrder(glyphUrls);
     if (distinctGlyphUrls.length > 1) {
-        console.warn(`Background group "${backgroundId}" uses multiple imported glyph URLs. Using the last imported style's glyphs URL.`);
+        console.warn(`Background layer "${backgroundId}" uses multiple imported glyph URLs. Using the last imported style's glyphs URL.`);
     }
 
     return glyphUrls[glyphUrls.length - 1] ?? catalog.topStyleGlyphsUrl;
@@ -1087,20 +1170,7 @@ async function loadBackgroundImport(
 }
 
 function backgroundSelectionIncludesImport(backgroundId: string, importId: string, catalog: BackgroundCatalog): boolean {
-    const definition = catalog.definitions.get(backgroundId);
-    if (!definition) {
-        return false;
-    }
-
-    if (definition.type === 'import') {
-        return definition.id === importId;
-    }
-
-    if (definition.type === 'group') {
-        return (definition.memberIds ?? []).includes(importId);
-    }
-
-    return false;
+    return catalog.backgroundDefinitions.get(backgroundId)?.memberIds.includes(importId) ?? false;
 }
 
 function normalizeImportedStyle(importConfig: StyleImportConfig, styleDocument: any): RuntimeImportInfo {
@@ -1809,23 +1879,8 @@ async function fitMapToBounds(map: maplibregl.Map, sources: Record<string, any>)
     }
 }
 
-/**
- * Finds layers that are interactive based on dataLayers configuration.
- */
-function getClickableLayerIds(config: AppConfig): string[] {
-    const clickableLayerIds: string[] = [];
-    if (config.customUi && Array.isArray(config.customUi.dataLayers)) {
-        config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
-            if (dataLayer.interactive) {
-                clickableLayerIds.push(...dataLayer.layerIds);
-            }
-        });
-    }
-    return clickableLayerIds;
-}
-
-function getDataLayerForMapLayerId(config: AppConfig, mapLayerId: string): DataLayerConfig | undefined {
-    return config.customUi?.dataLayers?.find((dataLayer: DataLayerConfig) =>
+function getDataLayerForMapLayerId(catalog: BackgroundCatalog, mapLayerId: string): DataLayerConfig | undefined {
+    return catalog.dataLayerEntries.find((dataLayer: DataLayerConfig) =>
         dataLayer.layerIds.includes(mapLayerId)
     );
 }
