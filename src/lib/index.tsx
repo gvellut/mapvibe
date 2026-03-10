@@ -10,14 +10,35 @@ import {
 
 // defined in css: width of map smaller than that : infopanel takes full size
 const INFO_PANEL_DESKTOP_WIDTH = 450;
-
 const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
+const IMPORT_NAMESPACE_PREFIX = "__imports_";
+const DEFAULT_IMPORTED_SPRITE_ID = "default";
+const RESOLVED_IMAGE_PROPERTIES = [
+    'icon-image',
+    'fill-pattern',
+    'fill-extrusion-pattern',
+    'line-pattern',
+    'background-pattern'
+] as const;
 
+type LayerVisibility = 'visible' | 'none';
+type SpriteConfig = string | Array<{ id: string; url: string }> | undefined;
 
 // --- TYPE DEFINITIONS for custom config properties ---
 export interface BackgroundLayerConfig {
     id: string;
     name: string;
+    visible?: boolean;
+}
+
+export interface StyleImportConfig {
+    id: string;
+    url: string;
+}
+
+export interface BackgroundGroupConfig {
+    id: string;
+    layerIds: string[];
 }
 
 export interface DataLayerConfig {
@@ -43,6 +64,8 @@ export interface CustomUiConfig {
         fullscreen?: boolean;
         attribution?: boolean;
     };
+    imports?: StyleImportConfig[];
+    groups?: BackgroundGroupConfig[];
     backgroundLayers: BackgroundLayerConfig[];
     dataLayers: DataLayerConfig[];
     globalMinZoom?: number;
@@ -51,10 +74,24 @@ export interface CustomUiConfig {
 
 export interface AppConfig {
     title?: string;
+    version?: number;
+    name?: string;
+    metadata?: any;
     center?: [number, number];
+    centerAltitude?: number;
     zoom?: number;
+    bearing?: number;
+    pitch?: number;
+    roll?: number;
     bounds?: [number, number, number, number];
-    sources?: any;
+    state?: any;
+    light?: any;
+    sky?: any;
+    projection?: any;
+    terrain?: any;
+    sources?: Record<string, any>;
+    sprite?: SpriteConfig;
+    glyphs?: string;
     layers?: any[];
     customUi: CustomUiConfig;
     customImageResources?: Array<{
@@ -72,8 +109,19 @@ export interface InfoPanelData {
     imagePadding?: [number, number, number, number];
 }
 
+export interface MapVibeImportInfo {
+    id: string;
+    url: string;
+    layerIds: string[];
+    sourceIds: string[];
+    spriteIds: string[];
+    glyphsUrl?: string;
+}
+
 export interface MapVibeMapHandle {
     getMap: () => maplibregl.Map | null;
+    getLayerIdsForBackgroundLayer: (id: string) => string[];
+    getImportInfo: (id: string) => MapVibeImportInfo | null;
 }
 
 export interface MapVibeMapProps {
@@ -82,6 +130,10 @@ export interface MapVibeMapProps {
     mobileCooperativeGestures?: boolean,
     rememberLastPosition?: RememberLastPositionValue,
     ref?: React.Ref<MapVibeMapHandle>
+}
+
+interface MapInstanceHandle {
+    getMap: () => maplibregl.Map | null;
 }
 
 // Map Component Props
@@ -102,11 +154,62 @@ interface MapProps {
     onStyleImageMissing?: (e: any) => void;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
     mobileCooperativeGestures?: boolean;
-    ref?: React.Ref<MapVibeMapHandle>;
+    ref?: React.Ref<MapInstanceHandle>;
+}
+
+interface BackgroundTargetDefinition {
+    id: string;
+    type: 'layer' | 'import' | 'group';
+    memberIds?: string[];
+}
+
+interface BackgroundCatalog {
+    backgroundEntries: BackgroundLayerConfig[];
+    definitions: Map<string, BackgroundTargetDefinition>;
+    importConfigs: Map<string, StyleImportConfig>;
+    topLayerDefinitions: Map<string, any>;
+    topSourceDefinitions: Record<string, any>;
+    managedTopLayerIds: Set<string>;
+    overlayBoundaryId?: string;
+    initialSelection: string;
+    initialVisibleDataLayerIds: Set<string>;
+    topStyleGlyphsUrl?: string;
+}
+
+interface SpriteMapping {
+    ids: Map<string, string>;
+    urls: Map<string, string>;
+    defaultSpriteId?: string;
+}
+
+interface RuntimeImportInfo extends MapVibeImportInfo {
+    originalVisibilityByLayerId: Map<string, LayerVisibility>;
+    sourceDefinitions: Map<string, any>;
+    layerDefinitions: Map<string, any>;
+    spriteUrls: Map<string, string>;
+}
+
+interface BackgroundRuntimeState {
+    imports: Map<string, RuntimeImportInfo>;
+    loadingImports: Set<string>;
 }
 
 // Custom Map Component
-const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onLoad, onClick, onDrag, onMoveEnd, onDblClick, onStyleImageMissing, customProtocols, mobileCooperativeGestures, ref }: MapProps) => {
+const MapCanvas = ({
+    mapStyle,
+    initialViewState,
+    style,
+    attributionControl = true,
+    onLoad,
+    onClick,
+    onDrag,
+    onMoveEnd,
+    onDblClick,
+    onStyleImageMissing,
+    customProtocols,
+    mobileCooperativeGestures,
+    ref
+}: MapProps) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<maplibregl.Map | null>(null);
 
@@ -117,14 +220,12 @@ const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onL
     useEffect(() => {
         if (!mapContainer.current) return;
 
-        // Add custom protocols
         if (customProtocols) {
             customProtocols.forEach(protocol => {
                 maplibregl.addProtocol(protocol.name, protocol.loadFn);
             });
         }
 
-        // Create map instance
         mapInstance.current = new maplibregl.Map({
             container: mapContainer.current,
             style: mapStyle,
@@ -137,16 +238,13 @@ const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onL
         const map = mapInstance.current;
 
         if (mobileCooperativeGestures && isMobile()) {
-            // cooperative gestures only on mobile
             map.cooperativeGestures.enable();
         }
 
-        // disable rotation and pitch shift everywhere
         map.dragRotate.disable();
         map.touchZoomRotate.disableRotation();
         map.touchPitch.disable();
 
-        // Set up event handlers
         if (onLoad) {
             map.on('load', onLoad);
         }
@@ -180,16 +278,27 @@ const Map = ({ mapStyle, initialViewState, style, attributionControl = true, onL
     return <div ref={mapContainer} style={style} />;
 };
 
-Map.displayName = 'Map';
+MapCanvas.displayName = 'MapCanvas';
 
 // --- REACT COMPONENTS ---
 export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, ref }: MapVibeMapProps) => {
-    const mapRef = useRef<MapVibeMapHandle>(null);
+    const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
+    const backgroundCatalogRef = useRef(backgroundCatalog);
+    backgroundCatalogRef.current = backgroundCatalog;
+
+    const configRef = useRef(config);
+    configRef.current = config;
+
+    const mapRef = useRef<MapInstanceHandle>(null);
+    const backgroundRuntimeRef = useRef<BackgroundRuntimeState>(createBackgroundRuntimeState());
+
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
-    const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState<string>('');
-    const [visibleDataLayers, setVisibleDataLayers] = useState<Set<string>>(new Set());
+    const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState(backgroundCatalog.initialSelection);
+    const selectedBackgroundLayerRef = useRef(backgroundCatalog.initialSelection);
+    const [visibleDataLayers, setVisibleDataLayers] = useState(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+
     const rememberLastPositionScope = normalizeRememberLastPosition(rememberLastPosition);
     const rememberedViewState = useMemo(
         () => loadRememberedViewState(rememberLastPositionScope),
@@ -206,75 +315,92 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 ? { bounds: config.bounds }
                 : {};
 
-    React.useImperativeHandle(ref, () => ({
-        getMap: () => mapRef.current?.getMap() ?? null
-    }), []);
+    useEffect(() => {
+        selectedBackgroundLayerRef.current = selectedBackgroundLayer;
+    }, [selectedBackgroundLayer]);
 
     useEffect(() => {
-        // Initialize layer states from config
-        if (config.customUi?.backgroundLayers) {
-            const defaultBg = config.customUi.backgroundLayers.find((layer: BackgroundLayerConfig) =>
-                config.layers?.find((l: any) => l.id === layer.id && l.layout?.visibility !== 'none')
+        backgroundRuntimeRef.current = createBackgroundRuntimeState();
+        selectedBackgroundLayerRef.current = backgroundCatalog.initialSelection;
+        setSelectedBackgroundLayer(backgroundCatalog.initialSelection);
+        setVisibleDataLayers(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+    }, [backgroundCatalog]);
+
+    React.useImperativeHandle(ref, () => ({
+        getMap: () => mapRef.current?.getMap() ?? null,
+        getLayerIdsForBackgroundLayer: (id: string) => getBackgroundLayerIds(id, backgroundCatalogRef.current, backgroundRuntimeRef.current),
+        getImportInfo: (id: string) => getImportInfo(backgroundRuntimeRef.current, id)
+    }), []);
+
+    const applySelectedBackground = useCallback((backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => {
+        const map = mapRef.current?.getMap();
+        if (!map) return;
+
+        applyBackgroundSelection(
+            map,
+            backgroundId,
+            backgroundCatalogRef.current,
+            backgroundRuntimeRef.current,
+            configRef.current.customUi
+        );
+
+        selectedBackgroundLayerRef.current = backgroundId;
+
+        if (options?.updateState !== false) {
+            setSelectedBackgroundLayer(backgroundId);
+        }
+
+        if (options?.closeChooser !== false) {
+            setLayerChooserVisible(false);
+        }
+    }, []);
+
+    const ensureConfiguredImportsLoaded = useCallback(() => {
+        for (const importConfig of backgroundCatalogRef.current.importConfigs.values()) {
+            void loadBackgroundImport(
+                importConfig,
+                backgroundCatalogRef,
+                backgroundRuntimeRef,
+                mapRef,
+                selectedBackgroundLayerRef,
+                applySelectedBackground
             );
-            if (defaultBg) {
-                setSelectedBackgroundLayer(defaultBg.id);
-            }
         }
+    }, [applySelectedBackground]);
 
-        if (config.customUi?.dataLayers) {
-            const visibleData = new Set<string>();
-            config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
-                // Check if any of the referenced layers are visible
-                const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
-                    const layerDef = config.layers?.find((l: any) => l.id === layerId);
-                    return layerDef && layerDef.layout?.visibility !== 'none';
-                });
-                if (hasVisibleLayers) {
-                    visibleData.add(dataLayer.id);
-                }
-            });
-            setVisibleDataLayers(visibleData);
-        }
-    }, [config]);
-
-    // Handle styleimagemissing event
     const handleStyleImageMissing = useCallback(async (e: any) => {
         const map = mapRef.current?.getMap();
-        if (!map || !config) return;
-        await loadCustomImageOnDemand(map, config, e.id);
-    }, [config]);
+        const currentConfig = configRef.current;
+        if (!map || !currentConfig) return;
+        await loadCustomImageOnDemand(map, currentConfig, e.id);
+    }, []);
 
-    // Handle map load
     const onMapLoad = useCallback(async () => {
         const map = mapRef.current?.getMap();
-        if (!map || !config) return;
+        const currentConfig = configRef.current;
+        if (!map || !currentConfig) return;
 
-        // Set initial zoom constraints based on the default active layer
-        if (selectedBackgroundLayer) {
-            const mapLayer = findLayerWithId(selectedBackgroundLayer, config);
-            const sourceName = mapLayer.source;
-            const sourceDef = config.sources && config.sources[sourceName] ? config.sources[sourceName] : {};
-            const { minZoom, maxZoom } = getClampedZoomBounds(sourceDef, config.customUi);
+        applyBackgroundSelection(
+            map,
+            selectedBackgroundLayerRef.current,
+            backgroundCatalogRef.current,
+            backgroundRuntimeRef.current,
+            currentConfig.customUi
+        );
 
-            map.setMinZoom(minZoom ?? null);
-            map.setMaxZoom(maxZoom ?? null);
-        }
-
-        // Add scale control if enabled
-        if (config.customUi?.controls?.scale) {
+        if (currentConfig.customUi?.controls?.scale) {
             map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
         }
-        // Add zoom control if enabled
-        if (config.customUi?.controls?.zoom) {
+
+        if (currentConfig.customUi?.controls?.zoom) {
             map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
         }
-        // Add attribution control if enabled
-        if (config.customUi?.controls?.attribution) {
+
+        if (currentConfig.customUi?.controls?.attribution) {
             map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
         }
 
-        // Add fullscreen button if enabled
-        if (config.customUi?.controls?.fullscreen) {
+        if (currentConfig.customUi?.controls?.fullscreen) {
             const fullscreenBtn = document.createElement('button');
             fullscreenBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-fullscreen-btn';
             fullscreenBtn.title = 'See larger';
@@ -288,18 +414,18 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
         }
 
-        // Set pointer cursor for interactive layers
-        const clickableLayerIds = getClickableLayerIds(config);
+        const clickableLayerIds = getClickableLayerIds(currentConfig);
         map.on('mousemove', (e) => {
             const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
             map.getCanvas().style.cursor = features.length ? 'pointer' : '';
         });
 
-        // Fit to bounds if no center/zoom specified or bounds
-        if (!hasRememberedViewState && !hasConfiguredCenterZoom && !hasConfiguredBounds && config.sources) {
-            await fitMapToBounds(map, config.sources);
+        ensureConfiguredImportsLoaded();
+
+        if (!hasRememberedViewState && !hasConfiguredCenterZoom && !hasConfiguredBounds && currentConfig.sources) {
+            await fitMapToBounds(map, currentConfig.sources);
         }
-    }, [config, selectedBackgroundLayer, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
+    }, [ensureConfiguredImportsLoaded, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
 
     const onMapMoveEnd = useCallback(() => {
         const map = mapRef.current?.getMap();
@@ -309,15 +435,14 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         saveRememberedViewState(rememberLastPositionScope, [center.lng, center.lat], map.getZoom());
     }, [rememberLastPositionScope]);
 
-    // Handle map click
     const onMapClick = useCallback((e: maplibregl.MapMouseEvent) => {
         const map = mapRef.current?.getMap();
-        if (!map || !config) return;
+        const currentConfig = configRef.current;
+        if (!map || !currentConfig) return;
 
-        // Always close layer chooser on map click
         setLayerChooserVisible(false);
 
-        const clickableLayerIds = getClickableLayerIds(config);
+        const clickableLayerIds = getClickableLayerIds(currentConfig);
         const features = map.queryRenderedFeatures(e.point, { layers: clickableLayerIds });
 
         if (!features.length) {
@@ -327,7 +452,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
 
         const feature = features[0];
         const properties = feature.properties;
-        const dataLayer = getDataLayerForMapLayerId(config, feature.layer.id);
+        const dataLayer = getDataLayerForMapLayerId(currentConfig, feature.layer.id);
 
         if (dataLayer?.openUrl) {
             const featureUrl = typeof properties?.url === 'string' ? properties.url : undefined;
@@ -336,7 +461,6 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             } else {
                 window.open(featureUrl, '_blank', 'noopener,noreferrer');
             }
-            // setInfoPanelVisible(false);
             return;
         }
 
@@ -352,9 +476,9 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         });
         setInfoPanelVisible(true);
 
-        const { recenterOnOpen, marginRecenterOnOpen } = config.customUi.panel;
+        const { recenterOnOpen, marginRecenterOnOpen } = currentConfig.customUi.panel;
         if (recenterOnOpen && window.innerWidth > INFO_PANEL_DESKTOP_WIDTH) {
-            const panelWidth = parseInt(config.customUi.panel.width, 10);
+            const panelWidth = parseInt(currentConfig.customUi.panel.width, 10);
             const margin = marginRecenterOnOpen || 0;
             const mapContainer = map.getContainer();
             const mapWidth = mapContainer.offsetWidth;
@@ -368,8 +492,6 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             let [clickX, clickY] = [e.point.x, e.point.y];
             if (clickX < coveredLeft || clickX > coveredRight
                 || clickY < coveredTop || clickY > coveredBottom) {
-                // Panel is on the left, so visible map area is shifted to the right.
-                // The center of the visible area is `panelWidth + margin + (visibleWidth / 2)`
                 const visibleWidth = mapWidth - panelWidth;
                 const targetX = panelWidth + (visibleWidth / 2);
                 const targetY = mapHeight / 2;
@@ -380,64 +502,49 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 map.panBy([panX, panY], { duration: 0 });
             }
         }
-    }, [config]);
+    }, []);
 
-    // Handle background layer change
     const handleBackgroundLayerChange = useCallback((layerId: string) => {
-        const map = mapRef.current?.getMap();
-        if (!map || !config) return;
+        applySelectedBackground(layerId, { updateState: true, closeChooser: true });
+    }, [applySelectedBackground]);
 
-        setSelectedBackgroundLayer(layerId);
-        setLayerChooserVisible(false);
-
-        // Update layer visibility
-        config.customUi.backgroundLayers.forEach((layer: BackgroundLayerConfig) => {
-            map.setLayoutProperty(layer.id, 'visibility', layer.id === layerId ? 'visible' : 'none');
-        });
-
-        // Update zoom constraints
-        const mapLayer = findLayerWithId(layerId, config);
-        const sourceName = mapLayer.source;
-        const sourceDef = config.sources && config.sources[sourceName] ? config.sources[sourceName] : {};
-        const { minZoom, maxZoom } = getClampedZoomBounds(sourceDef, config.customUi);
-        const currentZoom = map.getZoom();
-
-        map.setMinZoom(minZoom ?? null);
-        map.setMaxZoom(maxZoom ?? null);
-
-        if (maxZoom !== undefined && currentZoom > maxZoom) {
-            map.zoomTo(maxZoom);
-        } else if (minZoom !== undefined && currentZoom < minZoom) {
-            map.zoomTo(minZoom);
-        }
-    }, [config]);
-
-    // Handle data layer toggle
     const handleDataLayerToggle = useCallback((dataLayerId: string, visible: boolean) => {
         const map = mapRef.current?.getMap();
-        if (!map || !config) return;
+        const currentConfig = configRef.current;
+        if (!map || !currentConfig) return;
 
-        const newVisibleLayers = new Set(visibleDataLayers);
-        if (visible) {
-            newVisibleLayers.add(dataLayerId);
-        } else {
-            newVisibleLayers.delete(dataLayerId);
-        }
-        setVisibleDataLayers(newVisibleLayers);
+        setVisibleDataLayers(previous => {
+            const next = new Set(previous);
+            if (visible) {
+                next.add(dataLayerId);
+            } else {
+                next.delete(dataLayerId);
+            }
+            return next;
+        });
 
-        // Find the data layer config to get the layerIds
-        const dataLayer = config.customUi.dataLayers.find((layer: DataLayerConfig) => layer.id === dataLayerId);
+        const dataLayer = currentConfig.customUi.dataLayers.find((layer: DataLayerConfig) => layer.id === dataLayerId);
         if (dataLayer) {
-            // Toggle visibility for all layers referenced in layerIds
             dataLayer.layerIds.forEach(layerId => {
-                map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+                }
             });
         }
-    }, [visibleDataLayers, config]);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            const map = mapRef.current?.getMap();
+            if (map) {
+                cleanupImportedBackgrounds(map, backgroundRuntimeRef.current, backgroundCatalogRef.current);
+            }
+        };
+    }, []);
 
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <Map
+            <MapCanvas
                 ref={mapRef}
                 mapStyle={config as any}
                 initialViewState={initialViewState}
@@ -456,10 +563,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 customProtocols={customProtocols}
             />
 
-            {/* Controls */}
             {config.customUi?.controls && (
                 <>
-                    {/* Layer Chooser */}
                     {config.customUi.controls.layerChooser && (
                         <LayerChooser
                             config={config}
@@ -477,7 +582,6 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 </>
             )}
 
-            {/* Info Panel */}
             {infoPanelVisible && (
                 <InfoPanel
                     config={config.customUi.panel}
@@ -512,7 +616,6 @@ const LayerChooser: React.FC<{
             />
             {visible && (
                 <div className="layer-chooser-panel visible">
-                    {/* Background Layers */}
                     <h4>Background Layers</h4>
                     {config.customUi.backgroundLayers.map((layer) => (
                         <div key={layer.id}>
@@ -527,7 +630,6 @@ const LayerChooser: React.FC<{
                         </div>
                     ))}
 
-                    {/* Data Layers */}
                     <h4>Data Layers</h4>
                     {config.customUi.dataLayers.map((layer) => (
                         <div key={layer.id}>
@@ -618,6 +720,787 @@ const InfoPanel: React.FC<{
 
 // --- HELPER FUNCTIONS ---
 
+function createBackgroundRuntimeState(): BackgroundRuntimeState {
+    return {
+        imports: new Map<string, RuntimeImportInfo>(),
+        loadingImports: new Set<string>()
+    };
+}
+
+function buildBackgroundCatalog(config: AppConfig): BackgroundCatalog {
+    const topLayerDefinitions = new Map<string, any>();
+    const definitions = new Map<string, BackgroundTargetDefinition>();
+    const importConfigs = new Map<string, StyleImportConfig>();
+    const backgroundEntries = Array.isArray(config.customUi?.backgroundLayers) ? config.customUi.backgroundLayers : [];
+    const groupConfigs = Array.isArray(config.customUi?.groups) ? config.customUi.groups : [];
+    const importEntries = Array.isArray(config.customUi?.imports) ? config.customUi.imports : [];
+    const layers = Array.isArray(config.layers) ? config.layers : [];
+
+    for (const layer of layers) {
+        if (!layer || typeof layer.id !== 'string') {
+            continue;
+        }
+
+        if (topLayerDefinitions.has(layer.id)) {
+            console.warn(`Duplicate top-level layer id "${layer.id}" found in config.layers. Keeping the first definition.`);
+            continue;
+        }
+
+        topLayerDefinitions.set(layer.id, layer);
+        definitions.set(layer.id, { id: layer.id, type: 'layer' });
+    }
+
+    for (const importConfig of importEntries) {
+        if (!importConfig || typeof importConfig.id !== 'string' || typeof importConfig.url !== 'string') {
+            console.warn('Ignoring invalid customUi.imports entry because it is missing a string id or url.', importConfig);
+            continue;
+        }
+
+        if (definitions.has(importConfig.id)) {
+            console.warn(`Ignoring imported style "${importConfig.id}" because that id is already used elsewhere in the style.`);
+            continue;
+        }
+
+        importConfigs.set(importConfig.id, importConfig);
+        definitions.set(importConfig.id, { id: importConfig.id, type: 'import' });
+    }
+
+    for (const group of groupConfigs) {
+        if (!group || typeof group.id !== 'string' || !Array.isArray(group.layerIds)) {
+            console.warn('Ignoring invalid customUi.groups entry because it is missing a string id or layerIds array.', group);
+            continue;
+        }
+
+        if (definitions.has(group.id)) {
+            console.warn(`Ignoring background group "${group.id}" because that id is already used elsewhere in the style.`);
+            continue;
+        }
+
+        const validMembers = uniqueInOrder(group.layerIds.filter((layerId): layerId is string => typeof layerId === 'string').filter((layerId) => {
+            if (topLayerDefinitions.has(layerId) || importConfigs.has(layerId)) {
+                return true;
+            }
+
+            if (groupConfigs.some((candidate) => candidate?.id === layerId)) {
+                console.warn(`Ignoring nested background group reference "${layerId}" inside group "${group.id}". Nested groups are not supported.`);
+                return false;
+            }
+
+            console.warn(`Ignoring unknown background group member "${layerId}" inside group "${group.id}".`);
+            return false;
+        }));
+
+        definitions.set(group.id, {
+            id: group.id,
+            type: 'group',
+            memberIds: validMembers
+        });
+    }
+
+    for (const backgroundEntry of backgroundEntries) {
+        if (!definitions.has(backgroundEntry.id)) {
+            console.warn(`Background layer "${backgroundEntry.id}" does not match a top-level layer, import, or group.`);
+        }
+    }
+
+    const managedTopLayerIds = new Set<string>();
+    for (const backgroundEntry of backgroundEntries) {
+        if (topLayerDefinitions.has(backgroundEntry.id)) {
+            managedTopLayerIds.add(backgroundEntry.id);
+        }
+    }
+
+    for (const definition of definitions.values()) {
+        if (definition.type !== 'group') {
+            continue;
+        }
+
+        for (const memberId of definition.memberIds ?? []) {
+            if (topLayerDefinitions.has(memberId)) {
+                managedTopLayerIds.add(memberId);
+            }
+        }
+    }
+
+    const overlayBoundaryId = layers.find((layer) => layer && typeof layer.id === 'string' && !managedTopLayerIds.has(layer.id))?.id;
+
+    return {
+        backgroundEntries,
+        definitions,
+        importConfigs,
+        topLayerDefinitions,
+        topSourceDefinitions: config.sources ?? {},
+        managedTopLayerIds,
+        overlayBoundaryId,
+        initialSelection: determineInitialBackgroundSelection(backgroundEntries, topLayerDefinitions),
+        initialVisibleDataLayerIds: getInitialVisibleDataLayerIds(config),
+        topStyleGlyphsUrl: config.glyphs
+    };
+}
+
+function determineInitialBackgroundSelection(backgroundEntries: BackgroundLayerConfig[], topLayerDefinitions: Map<string, any>): string {
+    const explicitlyVisibleEntries = backgroundEntries.filter((layer) => layer.visible);
+    if (explicitlyVisibleEntries.length > 1) {
+        console.warn(`Multiple backgroundLayers entries declare "visible: true". Using "${explicitlyVisibleEntries[0].id}".`);
+    }
+    if (explicitlyVisibleEntries.length > 0) {
+        return explicitlyVisibleEntries[0].id;
+    }
+
+    const configuredVisibleLayer = backgroundEntries.find((layer) => {
+        const layerDefinition = topLayerDefinitions.get(layer.id);
+        return layerDefinition && layerDefinition.layout?.visibility !== 'none';
+    });
+
+    if (configuredVisibleLayer) {
+        return configuredVisibleLayer.id;
+    }
+
+    return backgroundEntries[0]?.id ?? '';
+}
+
+function getInitialVisibleDataLayerIds(config: AppConfig): Set<string> {
+    const visibleData = new Set<string>();
+    if (!config.customUi?.dataLayers) {
+        return visibleData;
+    }
+
+    config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
+        const hasVisibleLayers = dataLayer.layerIds.some(layerId => {
+            const layerDef = Array.isArray(config.layers) ? config.layers.find((layer: any) => layer.id === layerId) : undefined;
+            return layerDef && layerDef.layout?.visibility !== 'none';
+        });
+
+        if (hasVisibleLayers) {
+            visibleData.add(dataLayer.id);
+        }
+    });
+
+    return visibleData;
+}
+
+function getImportInfo(runtime: BackgroundRuntimeState, importId: string): MapVibeImportInfo | null {
+    const importInfo = runtime.imports.get(importId);
+    if (!importInfo) {
+        return null;
+    }
+
+    return {
+        id: importInfo.id,
+        url: importInfo.url,
+        layerIds: [...importInfo.layerIds],
+        sourceIds: [...importInfo.sourceIds],
+        spriteIds: [...importInfo.spriteIds],
+        glyphsUrl: importInfo.glyphsUrl
+    };
+}
+
+function getBackgroundLayerIds(backgroundId: string, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState): string[] {
+    return uniqueInOrder(resolveBackgroundLayerIds(backgroundId, catalog, runtime));
+}
+
+function resolveBackgroundLayerIds(backgroundId: string, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState): string[] {
+    const definition = catalog.definitions.get(backgroundId);
+    if (!definition) {
+        return [];
+    }
+
+    if (definition.type === 'layer') {
+        return catalog.topLayerDefinitions.has(backgroundId) ? [backgroundId] : [];
+    }
+
+    if (definition.type === 'import') {
+        return runtime.imports.get(backgroundId)?.layerIds ?? [];
+    }
+
+    const layerIds: string[] = [];
+    for (const memberId of definition.memberIds ?? []) {
+        layerIds.push(...resolveBackgroundLayerIds(memberId, catalog, runtime));
+    }
+    return layerIds;
+}
+
+function applyBackgroundSelection(
+    map: maplibregl.Map,
+    backgroundId: string,
+    catalog: BackgroundCatalog,
+    runtime: BackgroundRuntimeState,
+    chooserConfig: CustomUiConfig
+) {
+    hideAllManagedBackgroundTargets(map, catalog, runtime);
+
+    const resolvedLayerIds = getBackgroundLayerIds(backgroundId, catalog, runtime);
+    const boundaryId = catalog.overlayBoundaryId && map.getLayer(catalog.overlayBoundaryId) ? catalog.overlayBoundaryId : undefined;
+
+    for (const layerId of resolvedLayerIds) {
+        if (map.getLayer(layerId)) {
+            map.moveLayer(layerId, boundaryId);
+        }
+    }
+
+    for (const layerId of resolvedLayerIds) {
+        const importInfo = findImportForLayerId(runtime, layerId);
+        if (importInfo) {
+            const visibility = importInfo.originalVisibilityByLayerId.get(layerId) ?? 'visible';
+            if (map.getLayer(layerId)) {
+                map.setLayoutProperty(layerId, 'visibility', visibility);
+            }
+        } else if (catalog.topLayerDefinitions.has(layerId) && map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', 'visible');
+        }
+    }
+
+    map.setGlyphs(resolveBackgroundGlyphsUrl(backgroundId, catalog, runtime) ?? undefined);
+
+    const { minZoom, maxZoom } = getBackgroundZoomBounds(backgroundId, catalog, runtime, chooserConfig);
+    const currentZoom = map.getZoom();
+    map.setMinZoom(minZoom ?? null);
+    map.setMaxZoom(maxZoom ?? null);
+
+    if (maxZoom !== undefined && currentZoom > maxZoom) {
+        map.zoomTo(maxZoom);
+    } else if (minZoom !== undefined && currentZoom < minZoom) {
+        map.zoomTo(minZoom);
+    }
+}
+
+function hideAllManagedBackgroundTargets(map: maplibregl.Map, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState) {
+    for (const layerId of catalog.managedTopLayerIds) {
+        if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', 'none');
+        }
+    }
+
+    for (const importInfo of runtime.imports.values()) {
+        hideImportedBackground(map, importInfo);
+    }
+}
+
+function hideImportedBackground(map: maplibregl.Map, importInfo: RuntimeImportInfo) {
+    for (const layerId of importInfo.layerIds) {
+        if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', 'none');
+        }
+    }
+}
+
+function findImportForLayerId(runtime: BackgroundRuntimeState, layerId: string): RuntimeImportInfo | undefined {
+    for (const importInfo of runtime.imports.values()) {
+        if (importInfo.layerDefinitions.has(layerId)) {
+            return importInfo;
+        }
+    }
+
+    return undefined;
+}
+
+function resolveBackgroundGlyphsUrl(backgroundId: string, catalog: BackgroundCatalog, runtime: BackgroundRuntimeState): string | undefined {
+    const definition = catalog.definitions.get(backgroundId);
+    if (!definition) {
+        return catalog.topStyleGlyphsUrl;
+    }
+
+    if (definition.type === 'import') {
+        return runtime.imports.get(backgroundId)?.glyphsUrl ?? catalog.topStyleGlyphsUrl;
+    }
+
+    if (definition.type !== 'group') {
+        return catalog.topStyleGlyphsUrl;
+    }
+
+    const glyphUrls: string[] = [];
+    for (const memberId of definition.memberIds ?? []) {
+        const importInfo = runtime.imports.get(memberId);
+        if (importInfo?.glyphsUrl) {
+            glyphUrls.push(importInfo.glyphsUrl);
+        }
+    }
+
+    const distinctGlyphUrls = uniqueInOrder(glyphUrls);
+    if (distinctGlyphUrls.length > 1) {
+        console.warn(`Background group "${backgroundId}" uses multiple imported glyph URLs. Using the last imported style's glyphs URL.`);
+    }
+
+    return glyphUrls[glyphUrls.length - 1] ?? catalog.topStyleGlyphsUrl;
+}
+
+function getBackgroundZoomBounds(
+    backgroundId: string,
+    catalog: BackgroundCatalog,
+    runtime: BackgroundRuntimeState,
+    chooserConfig: CustomUiConfig
+) {
+    const layerIds = getBackgroundLayerIds(backgroundId, catalog, runtime);
+
+    for (const layerId of layerIds) {
+        const importInfo = findImportForLayerId(runtime, layerId);
+        if (importInfo) {
+            const layerDefinition = importInfo.layerDefinitions.get(layerId);
+            const sourceName = layerDefinition?.source;
+            const sourceDef = sourceName ? importInfo.sourceDefinitions.get(sourceName) : undefined;
+            if (sourceDef) {
+                return getClampedZoomBounds(sourceDef, chooserConfig);
+            }
+            continue;
+        }
+
+        const layerDefinition = catalog.topLayerDefinitions.get(layerId);
+        const sourceName = layerDefinition?.source;
+        const sourceDef = sourceName ? catalog.topSourceDefinitions[sourceName] : undefined;
+        if (sourceDef) {
+            return getClampedZoomBounds(sourceDef, chooserConfig);
+        }
+    }
+
+    return getClampedZoomBounds({}, chooserConfig);
+}
+
+async function loadBackgroundImport(
+    importConfig: StyleImportConfig,
+    catalogRef: React.MutableRefObject<BackgroundCatalog>,
+    runtimeRef: React.MutableRefObject<BackgroundRuntimeState>,
+    mapRef: React.RefObject<MapInstanceHandle | null>,
+    selectedBackgroundLayerRef: React.MutableRefObject<string>,
+    applySelectedBackground: (backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => void
+) {
+    const runtime = runtimeRef.current;
+    if (runtime.imports.has(importConfig.id) || runtime.loadingImports.has(importConfig.id)) {
+        return;
+    }
+
+    runtime.loadingImports.add(importConfig.id);
+
+    try {
+        const response = await fetch(importConfig.url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch imported style "${importConfig.id}": ${response.status} ${response.statusText}`);
+        }
+
+        const styleDocument = await response.json();
+        const runtimeImportInfo = normalizeImportedStyle(importConfig, styleDocument);
+
+        const map = mapRef.current?.getMap();
+        if (!map) {
+            return;
+        }
+
+        materializeImportedStyle(map, runtimeImportInfo, catalogRef.current.overlayBoundaryId);
+        runtime.imports.set(importConfig.id, runtimeImportInfo);
+
+        if (backgroundSelectionIncludesImport(selectedBackgroundLayerRef.current, importConfig.id, catalogRef.current)) {
+            applySelectedBackground(selectedBackgroundLayerRef.current, { updateState: false, closeChooser: false });
+        }
+    } catch (error) {
+        console.warn(`Could not load imported style "${importConfig.id}" from ${importConfig.url}.`, error);
+    } finally {
+        runtime.loadingImports.delete(importConfig.id);
+    }
+}
+
+function backgroundSelectionIncludesImport(backgroundId: string, importId: string, catalog: BackgroundCatalog): boolean {
+    const definition = catalog.definitions.get(backgroundId);
+    if (!definition) {
+        return false;
+    }
+
+    if (definition.type === 'import') {
+        return definition.id === importId;
+    }
+
+    if (definition.type === 'group') {
+        return (definition.memberIds ?? []).includes(importId);
+    }
+
+    return false;
+}
+
+function normalizeImportedStyle(importConfig: StyleImportConfig, styleDocument: any): RuntimeImportInfo {
+    const namespacePrefix = `${IMPORT_NAMESPACE_PREFIX}${importConfig.id}_`;
+    const sourceDefinitions = new Map<string, any>();
+    const layerDefinitions = new Map<string, any>();
+    const originalVisibilityByLayerId = new Map<string, LayerVisibility>();
+    const layerIds: string[] = [];
+
+    const spriteMapping = normalizeSpriteConfiguration(styleDocument?.sprite, importConfig.url, namespacePrefix);
+    const glyphsUrl = typeof styleDocument?.glyphs === 'string' ? resolveMaybeRelativeUrl(styleDocument.glyphs, importConfig.url) : undefined;
+
+    for (const [sourceId, sourceDefinition] of Object.entries(styleDocument?.sources ?? {})) {
+        if (typeof sourceId !== 'string' || !sourceDefinition || typeof sourceDefinition !== 'object') {
+            continue;
+        }
+
+        const nextSourceDefinition = cloneJson(sourceDefinition);
+        rebaseSourceUrls(nextSourceDefinition, importConfig.url);
+        sourceDefinitions.set(`${namespacePrefix}${sourceId}`, nextSourceDefinition);
+    }
+
+    for (const layerDefinition of Array.isArray(styleDocument?.layers) ? styleDocument.layers : []) {
+        if (!layerDefinition || typeof layerDefinition.id !== 'string') {
+            continue;
+        }
+
+        const originalLayerId = layerDefinition.id;
+        const nextLayerId = `${namespacePrefix}${originalLayerId}`;
+        const nextLayerDefinition = cloneJson(layerDefinition);
+
+        if (typeof nextLayerDefinition.source === 'string') {
+            nextLayerDefinition.source = `${namespacePrefix}${nextLayerDefinition.source}`;
+        }
+
+        if (typeof nextLayerDefinition.ref === 'string') {
+            nextLayerDefinition.ref = `${namespacePrefix}${nextLayerDefinition.ref}`;
+        }
+
+        rewriteLayerImageReferences(nextLayerDefinition, spriteMapping);
+
+        const originalVisibility = nextLayerDefinition.layout?.visibility === 'none' ? 'none' : 'visible';
+        originalVisibilityByLayerId.set(nextLayerId, originalVisibility);
+
+        nextLayerDefinition.id = nextLayerId;
+        nextLayerDefinition.layout = {
+            ...(nextLayerDefinition.layout ?? {}),
+            visibility: 'none'
+        };
+
+        layerDefinitions.set(nextLayerId, nextLayerDefinition);
+        layerIds.push(nextLayerId);
+    }
+
+    return {
+        id: importConfig.id,
+        url: importConfig.url,
+        layerIds,
+        sourceIds: [...sourceDefinitions.keys()],
+        spriteIds: [...spriteMapping.urls.keys()],
+        glyphsUrl,
+        originalVisibilityByLayerId,
+        sourceDefinitions,
+        layerDefinitions,
+        spriteUrls: spriteMapping.urls
+    };
+}
+
+function materializeImportedStyle(map: maplibregl.Map, importInfo: RuntimeImportInfo, beforeId?: string) {
+    const currentSpriteIds = new Set(map.getSprite().map((sprite) => sprite.id));
+
+    for (const [spriteId, spriteUrl] of importInfo.spriteUrls.entries()) {
+        if (!currentSpriteIds.has(spriteId)) {
+            map.addSprite(spriteId, spriteUrl);
+        }
+    }
+
+    for (const [sourceId, sourceDefinition] of importInfo.sourceDefinitions.entries()) {
+        if (!map.getSource(sourceId)) {
+            map.addSource(sourceId, sourceDefinition);
+        }
+    }
+
+    for (const layerId of importInfo.layerIds) {
+        const layerDefinition = importInfo.layerDefinitions.get(layerId);
+        if (!layerDefinition || map.getLayer(layerId)) {
+            continue;
+        }
+
+        map.addLayer(layerDefinition, beforeId);
+    }
+}
+
+function cleanupImportedBackgrounds(map: maplibregl.Map, runtime: BackgroundRuntimeState, catalog: BackgroundCatalog) {
+    for (const importInfo of runtime.imports.values()) {
+        for (const layerId of [...importInfo.layerIds].reverse()) {
+            if (map.getLayer(layerId)) {
+                map.removeLayer(layerId);
+            }
+        }
+
+        for (const sourceId of importInfo.sourceIds) {
+            if (map.getSource(sourceId)) {
+                map.removeSource(sourceId);
+            }
+        }
+
+        const currentSpriteIds = new Set(map.getSprite().map((sprite) => sprite.id));
+        for (const spriteId of importInfo.spriteIds) {
+            if (currentSpriteIds.has(spriteId)) {
+                map.removeSprite(spriteId);
+            }
+        }
+    }
+
+    runtime.imports.clear();
+    runtime.loadingImports.clear();
+    map.setGlyphs(catalog.topStyleGlyphsUrl ?? undefined);
+}
+
+function normalizeSpriteConfiguration(spriteConfig: SpriteConfig, baseUrl: string, namespacePrefix: string): SpriteMapping {
+    const ids = new Map<string, string>();
+    const urls = new Map<string, string>();
+    let defaultSpriteId: string | undefined;
+
+    if (typeof spriteConfig === 'string') {
+        const runtimeSpriteId = `${namespacePrefix}${DEFAULT_IMPORTED_SPRITE_ID}`;
+        ids.set(DEFAULT_IMPORTED_SPRITE_ID, runtimeSpriteId);
+        urls.set(runtimeSpriteId, resolveMaybeRelativeUrl(spriteConfig, baseUrl));
+        defaultSpriteId = runtimeSpriteId;
+    } else if (Array.isArray(spriteConfig)) {
+        for (const spriteEntry of spriteConfig) {
+            if (!spriteEntry || typeof spriteEntry.id !== 'string' || typeof spriteEntry.url !== 'string') {
+                continue;
+            }
+
+            const runtimeSpriteId = `${namespacePrefix}${spriteEntry.id}`;
+            ids.set(spriteEntry.id, runtimeSpriteId);
+            urls.set(runtimeSpriteId, resolveMaybeRelativeUrl(spriteEntry.url, baseUrl));
+
+            if (spriteEntry.id === DEFAULT_IMPORTED_SPRITE_ID) {
+                defaultSpriteId = runtimeSpriteId;
+            }
+        }
+    }
+
+    return { ids, urls, defaultSpriteId };
+}
+
+function rebaseSourceUrls(sourceDefinition: any, baseUrl: string) {
+    if (!sourceDefinition || typeof sourceDefinition !== 'object') {
+        return;
+    }
+
+    if (typeof sourceDefinition.url === 'string') {
+        sourceDefinition.url = resolveMaybeRelativeUrl(sourceDefinition.url, baseUrl);
+    }
+
+    if (typeof sourceDefinition.data === 'string') {
+        sourceDefinition.data = resolveMaybeRelativeUrl(sourceDefinition.data, baseUrl);
+    }
+
+    if (typeof sourceDefinition.sprite === 'string') {
+        sourceDefinition.sprite = resolveMaybeRelativeUrl(sourceDefinition.sprite, baseUrl);
+    }
+
+    if (typeof sourceDefinition.glyphs === 'string') {
+        sourceDefinition.glyphs = resolveMaybeRelativeUrl(sourceDefinition.glyphs, baseUrl);
+    }
+
+    if (typeof sourceDefinition.attribution === 'string') {
+        sourceDefinition.attribution = sourceDefinition.attribution;
+    }
+
+    if (Array.isArray(sourceDefinition.tiles)) {
+        sourceDefinition.tiles = sourceDefinition.tiles.map((tileUrl: any) =>
+            typeof tileUrl === 'string' ? resolveMaybeRelativeUrl(tileUrl, baseUrl) : tileUrl
+        );
+    }
+
+    if (Array.isArray(sourceDefinition.urls)) {
+        sourceDefinition.urls = sourceDefinition.urls.map((item: any) =>
+            typeof item === 'string' ? resolveMaybeRelativeUrl(item, baseUrl) : item
+        );
+    }
+}
+
+function rewriteLayerImageReferences(layerDefinition: any, spriteMapping: SpriteMapping) {
+    for (const propertyName of RESOLVED_IMAGE_PROPERTIES) {
+        if (layerDefinition.layout && propertyName in layerDefinition.layout) {
+            layerDefinition.layout[propertyName] = rewriteResolvedImageValue(layerDefinition.layout[propertyName], spriteMapping);
+        }
+
+        if (layerDefinition.paint && propertyName in layerDefinition.paint) {
+            layerDefinition.paint[propertyName] = rewriteResolvedImageValue(layerDefinition.paint[propertyName], spriteMapping);
+        }
+    }
+}
+
+function rewriteResolvedImageValue(value: any, spriteMapping: SpriteMapping): any {
+    if (typeof value === 'string') {
+        return prefixImageStringReference(value, spriteMapping);
+    }
+
+    if (!Array.isArray(value)) {
+        return value;
+    }
+
+    const operator = typeof value[0] === 'string' ? value[0] : undefined;
+    if (operator === 'image') {
+        if (value.length < 2) {
+            return value;
+        }
+
+        const nextValue = [...value];
+        nextValue[1] = prefixStringExpression(nextValue[1], spriteMapping);
+        return nextValue;
+    }
+
+    if (expressionContainsOperator(value, 'image')) {
+        return rewriteNestedResolvedImageExpression(value, spriteMapping);
+    }
+
+    if (!spriteMapping.defaultSpriteId) {
+        return value;
+    }
+
+    return ['image', prependToStringExpression(`${spriteMapping.defaultSpriteId}:`, value)];
+}
+
+function rewriteNestedResolvedImageExpression(value: any, spriteMapping: SpriteMapping): any {
+    if (!Array.isArray(value)) {
+        return value;
+    }
+
+    const operator = typeof value[0] === 'string' ? value[0] : undefined;
+    if (operator === 'image') {
+        if (value.length < 2) {
+            return value;
+        }
+
+        const nextValue = [...value];
+        nextValue[1] = prefixStringExpression(nextValue[1], spriteMapping);
+        return nextValue;
+    }
+
+    return value.map((item) => Array.isArray(item) ? rewriteNestedResolvedImageExpression(item, spriteMapping) : item);
+}
+
+function expressionContainsOperator(value: any, operator: string): boolean {
+    if (!Array.isArray(value) || value.length === 0) {
+        return false;
+    }
+
+    if (value[0] === operator) {
+        return true;
+    }
+
+    return value.some((item) => Array.isArray(item) && expressionContainsOperator(item, operator));
+}
+
+function prefixStringExpression(value: any, spriteMapping: SpriteMapping): any {
+    if (typeof value === 'string') {
+        return prefixImageStringReference(value, spriteMapping);
+    }
+
+    if (!spriteMapping.defaultSpriteId) {
+        return value;
+    }
+
+    return prependToStringExpression(`${spriteMapping.defaultSpriteId}:`, value);
+}
+
+function prefixImageStringReference(value: string, spriteMapping: SpriteMapping): any {
+    const resolvedReference = resolveSpriteReference(value, spriteMapping);
+    if (!resolvedReference) {
+        return value;
+    }
+
+    const imageExpression = resolvedReference.imageReference.includes('{')
+        ? tokenStringToExpression(resolvedReference.imageReference)
+        : resolvedReference.imageReference;
+
+    return prependToStringExpression(`${resolvedReference.spriteId}:`, imageExpression);
+}
+
+function resolveSpriteReference(value: string, spriteMapping: SpriteMapping): { spriteId: string; imageReference: string } | null {
+    const firstColonIndex = value.indexOf(':');
+    if (firstColonIndex > 0) {
+        const candidateSpriteId = value.slice(0, firstColonIndex);
+        const mappedSpriteId = spriteMapping.ids.get(candidateSpriteId);
+        if (mappedSpriteId) {
+            return {
+                spriteId: mappedSpriteId,
+                imageReference: value.slice(firstColonIndex + 1)
+            };
+        }
+    }
+
+    if (!spriteMapping.defaultSpriteId) {
+        return null;
+    }
+
+    return {
+        spriteId: spriteMapping.defaultSpriteId,
+        imageReference: value
+    };
+}
+
+function tokenStringToExpression(value: string): any {
+    const parts: any[] = [];
+    const tokenPattern = /\{([^}]+)\}/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null = null;
+
+    while ((match = tokenPattern.exec(value)) !== null) {
+        const literalPart = value.slice(lastIndex, match.index);
+        if (literalPart) {
+            parts.push(literalPart);
+        }
+
+        parts.push(['coalesce', ['to-string', ['get', match[1]]], '']);
+        lastIndex = match.index + match[0].length;
+    }
+
+    const trailingLiteral = value.slice(lastIndex);
+    if (trailingLiteral) {
+        parts.push(trailingLiteral);
+    }
+
+    if (parts.length === 0) {
+        return value;
+    }
+
+    if (parts.length === 1) {
+        return parts[0];
+    }
+
+    return ['concat', ...parts];
+}
+
+function prependToStringExpression(prefix: string, value: any): any {
+    if (typeof value === 'string') {
+        return `${prefix}${value}`;
+    }
+
+    if (Array.isArray(value) && value[0] === 'concat') {
+        return ['concat', prefix, ...value.slice(1)];
+    }
+
+    return ['concat', prefix, value];
+}
+
+function resolveMaybeRelativeUrl(value: string, baseUrl: string): string {
+    if (!value) {
+        return value;
+    }
+
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value) || value.startsWith('//')) {
+        return value;
+    }
+
+    try {
+        return new URL(value, baseUrl).href;
+    } catch {
+        return value;
+    }
+}
+
+function uniqueInOrder<T>(items: T[]): T[] {
+    const result: T[] = [];
+    const seen = new Set<T>();
+
+    for (const item of items) {
+        if (seen.has(item)) {
+            continue;
+        }
+
+        seen.add(item);
+        result.push(item);
+    }
+
+    return result;
+}
+
+function cloneJson<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value));
+}
+
 function extractNumericValues(value: unknown): number[] {
     if (typeof value === 'number') {
         return Number.isFinite(value) ? [value] : [];
@@ -673,21 +1556,16 @@ function formatBoxSpacing(value?: [number, number, number, number]): string {
     return value.map(item => `${item}px`).join(' ');
 }
 
-function findLayerWithId(layerId: string, config: AppConfig) {
-    return (Array.isArray(config.layers) ? config.layers.find((l: any) => l.id === layerId) : undefined) || {};
-}
-
 /**
  * Calculates the bounding box of all GeoJSON sources and fits the map view.
  */
-async function fitMapToBounds(map: maplibregl.Map, sources: any) {
+async function fitMapToBounds(map: maplibregl.Map, sources: Record<string, any>) {
     const bounds = new LngLatBounds();
     const geojsonFetches: Promise<any>[] = [];
 
     for (const sourceName in sources) {
         const source = sources[sourceName];
         if (source.type === 'geojson' && typeof source.data === 'string') {
-            // Try to get the data directly from the map's source if available
             const mapSource = map.getSource(sourceName) as maplibregl.GeoJSONSource | undefined;
             if (mapSource && typeof mapSource.getData === 'function') {
                 const data = mapSource.getData();
@@ -696,7 +1574,7 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
                     continue;
                 }
             }
-            // Fallback: fetch from URL if not present in maplibre
+
             geojsonFetches.push(fetch(source.data).then(res => res.json()));
         }
     }
@@ -724,7 +1602,7 @@ async function fitMapToBounds(map: maplibregl.Map, sources: any) {
         });
 
         if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { padding: 100 }); // 10% padding approximation
+            map.fitBounds(bounds, { padding: 100 });
         }
     } catch (error) {
         console.error("Could not fit map to bounds:", error);
@@ -739,7 +1617,6 @@ function getClickableLayerIds(config: AppConfig): string[] {
     if (config.customUi && Array.isArray(config.customUi.dataLayers)) {
         config.customUi.dataLayers.forEach((dataLayer: DataLayerConfig) => {
             if (dataLayer.interactive) {
-                // Add all layerIds from this interactive data layer
                 clickableLayerIds.push(...dataLayer.layerIds);
             }
         });
@@ -768,7 +1645,6 @@ async function loadCustomImageOnDemand(map: maplibregl.Map, config: AppConfig, i
         return;
     }
 
-    // Don't try to load the same image more than once.
     if (map.hasImage(imageId)) {
         return;
     }
@@ -797,7 +1673,6 @@ function getClampedZoomBounds(sourceDef: any, chooserConfig: CustomUiConfig) {
 }
 
 function isMobile(): boolean {
-    // Check for touch events and a coarse check of the user agent
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isLikelyMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
     return hasTouch && isLikelyMobile;
