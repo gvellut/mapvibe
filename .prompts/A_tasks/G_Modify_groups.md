@@ -1,0 +1,7 @@
+- Remove the groups customUi field : Isntead use the same system for background layers as for data Layers, using a layerIds array attribute.
+The customUI Backgroud layers ID are separate from the ids of the layers : they could be the same but they are not in the same namespace (like the ids of data layers and layers). 
+Add a layerIds array field below background layers that will contain multiple layer ids or ids of imports. 
+The order of the Ids are relevant (they are displayed in order) like with groups.
+
+- Also : before display of anything : disregard the visiblity of all the layers from the top style config (the imported styles are their own thing : their visibility is controlled through the visiblity of the import virtual layer) . Assume they are all non visible by default, with the customUi setting controlling the actual visibility.
+Instead : add a field visible : boolean in the layers in customUI  background and data layers. For background layers : since there should be only one visible : if multiple : console log warning + make visible only the first visible:true if multiple. If none are visble:true : set as visible the first of the backround layers (checked in the GUI also). By default for background layers : visible is false (explicit visible true). For data layers : default is visible true (explicit visible False). The visible field in background and data layers will control the visibility of each of the layers and imports (virtual layer) in the top style config.

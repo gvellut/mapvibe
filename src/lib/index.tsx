@@ -1140,6 +1140,10 @@ function normalizeImportedStyle(importConfig: StyleImportConfig, styleDocument: 
             nextLayerDefinition.ref = `${namespacePrefix}${nextLayerDefinition.ref}`;
         }
 
+        if (Array.isArray(nextLayerDefinition.filter)) {
+            nextLayerDefinition.filter = rewriteImportedFilterExpression(nextLayerDefinition.filter);
+        }
+
         rewriteLayerImageReferences(nextLayerDefinition, spriteMapping);
 
         const originalVisibility = nextLayerDefinition.layout?.visibility === 'none' ? 'none' : 'visible';
@@ -1298,6 +1302,45 @@ function rewriteLayerImageReferences(layerDefinition: any, spriteMapping: Sprite
             layerDefinition.paint[propertyName] = rewriteResolvedImageValue(layerDefinition.paint[propertyName], spriteMapping);
         }
     }
+}
+
+function rewriteImportedFilterExpression(value: any): any {
+    if (!Array.isArray(value) || value.length === 0) {
+        return value;
+    }
+
+    const directGetPropertyName = getDirectGetPropertyNameForNumericComparison(value);
+    if (directGetPropertyName) {
+        const fallback = value[0] === '!=' ? true : false;
+        return ['case', ['has', directGetPropertyName], value, fallback];
+    }
+
+    return value.map((item) => Array.isArray(item) ? rewriteImportedFilterExpression(item) : item);
+}
+
+function getDirectGetPropertyNameForNumericComparison(value: any[]): string | null {
+    const operator = typeof value[0] === 'string' ? value[0] : undefined;
+    if (!operator || !['<', '<=', '>', '>=', '==', '!='].includes(operator)) {
+        return null;
+    }
+
+    if (typeof value[1] === 'number') {
+        return getDirectGetPropertyName(value[2]);
+    }
+
+    if (typeof value[2] === 'number') {
+        return getDirectGetPropertyName(value[1]);
+    }
+
+    return null;
+}
+
+function getDirectGetPropertyName(value: any): string | null {
+    if (!Array.isArray(value) || value[0] !== 'get' || typeof value[1] !== 'string') {
+        return null;
+    }
+
+    return value[1];
 }
 
 function rewriteResolvedImageValue(value: any, spriteMapping: SpriteMapping): any {
