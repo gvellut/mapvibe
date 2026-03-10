@@ -255,6 +255,11 @@ const config: AppConfig = {
 For `openUrl` layers, each clicked feature is expected to expose a string `url` property in its GeoJSON `properties`. If `url` is missing, MapVibe logs a warning in the console and does not open a popup.
 
 
+## Notes
+
+### Upgrade dev deps
+
+`npx npm-check-updates -u --dep dev`
 
 ## License
 
