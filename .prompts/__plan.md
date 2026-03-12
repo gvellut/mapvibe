@@ -6,3 +6,4 @@
 ! [Correction imports](A_tasks/F_Correction_imports.md)
 ! [Modify groups](A_tasks/G_Modify_groups.md)
 ! [Background for image](A_tasks/H_Background_for_image.md)
+! [Click on cluster zoom](A_tasks/I_Click_on_cluster_zoom.md)

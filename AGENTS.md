@@ -31,6 +31,7 @@ Mapvibe config files are based on the MapLibre style JSON format, but they also 
 - `backgroundLayers[].layerIds` is required. It references one or more top-style layer ids and/or import ids in display order.
 - `backgroundLayers[].visible` is a Mapvibe-only initial-selection flag for the radio chooser. If none are `true`, the first background entry is selected.
 - `dataLayers[].visible` is a Mapvibe-only visibility flag. It defaults to `true`; set `false` to start hidden.
+- `dataLayers[].clusterInteractive` is a Mapvibe-only opt-in flag for interactive clustered GeoJSON layers. When `true`, generated cluster features zoom to expansion instead of opening the info panel; non-cluster features in the same data layer keep their normal click behavior.
 - On startup, Mapvibe hides all top-style layers first and then applies visibility from `customUi`. Raw style-layer visibility is ignored for startup.
 
 ### Imports
@@ -50,3 +51,4 @@ When finishing the work, update this AGENTS.md with consideration for future wor
 
 - `InfoPanelData` now supports an optional `imageBackgroundColor` string copied from interactive feature properties, alongside `imageUrl`, `imageSize`, and `imagePadding`.
 - The info panel applies `imageBackgroundColor` to the outer image wrapper div, so GeoJSON feature properties can control the fill behind contained images.
+- `customUi.dataLayers[].clusterInteractive` is an opt-in flag for clustered interactive GeoJSON layers. When `true`, generated cluster features zoom to their expansion zoom and do not open the info panel; leaf features in the same data layer keep the existing `openUrl` or info-panel behavior.

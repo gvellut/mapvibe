@@ -1,0 +1,158 @@
+{
+    "title": "Clustered POI Sample",
+    "version": 8,
+    "center": [
+        6.224185,
+        45.728743
+    ],
+    "zoom": 11.5,
+    "sources": {
+        "osm-background": {
+            "type": "raster",
+            "tiles": [
+                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            ],
+            "tileSize": 256,
+            "attribution": "© OpenStreetMap contributors",
+            "maxzoom": 18
+        },
+        "clustered-poi": {
+            "type": "geojson",
+            "data": "samples/sample5/poi.geojson",
+            "cluster": true,
+            "clusterMaxZoom": 14,
+            "clusterRadius": 60
+        }
+    },
+    "layers": [
+        {
+            "id": "osm-background",
+            "type": "raster",
+            "source": "osm-background",
+            "layout": {
+                "visibility": "visible"
+            }
+        },
+        {
+            "id": "clustered-poi-clusters",
+            "type": "circle",
+            "source": "clustered-poi",
+            "filter": [
+                "has",
+                "point_count"
+            ],
+            "paint": {
+                "circle-color": [
+                    "step",
+                    [
+                        "get",
+                        "point_count"
+                    ],
+                    "#5f8f6b",
+                    5,
+                    "#d9a441",
+                    10,
+                    "#bf5b39"
+                ],
+                "circle-radius": [
+                    "step",
+                    [
+                        "get",
+                        "point_count"
+                    ],
+                    16,
+                    5,
+                    22,
+                    10,
+                    28
+                ],
+                "circle-stroke-width": 1,
+                "circle-stroke-color": "#ffffff"
+            }
+        },
+        {
+            "id": "clustered-poi-cluster-count",
+            "type": "symbol",
+            "source": "clustered-poi",
+            "filter": [
+                "has",
+                "point_count"
+            ],
+            "layout": {
+                "text-field": "{point_count_abbreviated}",
+                "text-font": [
+                    "Open Sans Regular",
+                    "Arial Unicode MS Regular"
+                ],
+                "text-size": 12,
+                "text-allow-overlap": true,
+                "text-ignore-placement": true
+            },
+            "paint": {
+                "text-color": "#ffffff"
+            }
+        },
+        {
+            "id": "clustered-poi-leaves",
+            "type": "symbol",
+            "source": "clustered-poi",
+            "filter": [
+                "!",
+                [
+                    "has",
+                    "point_count"
+                ]
+            ],
+            "layout": {
+                "icon-image": "camera",
+                "icon-size": 0.8,
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true
+            }
+        }
+    ],
+    "customImageResources": [
+        {
+            "id": "camera",
+            "url": "assets/markers/camera.png",
+            "pixelRatio": 2
+        }
+    ],
+    "customUi": {
+        "panel": {
+            "backgroundColor": "#f8f9fa",
+            "width": "280px"
+        },
+        "controls": {
+            "zoom": true,
+            "scale": true,
+            "layerChooser": true,
+            "fullscreen": true,
+            "attribution": true
+        },
+        "backgroundLayers": [
+            {
+                "id": "osm-background",
+                "name": "Street Map",
+                "layerIds": [
+                    "osm-background"
+                ]
+            }
+        ],
+        "dataLayers": [
+            {
+                "id": "clustered-poi",
+                "layerIds": [
+                    "clustered-poi-clusters",
+                    "clustered-poi-cluster-count",
+                    "clustered-poi-leaves"
+                ],
+                "name": "Clustered POI",
+                "interactive": true,
+                "clusterInteractive": true
+            }
+        ],
+        "globalMinZoom": 5,
+        "globalMaxZoom": 18
+    }
+}

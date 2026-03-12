@@ -19,6 +19,7 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
     - `dataLayers[].layerIds` references top-style layer ids.
     - Data layers default to visible. Set `visible: false` to start hidden.
     - Set `interactive: true` to make a data layer clickable.
+    - Add `clusterInteractive: true` on an interactive clustered data layer to make generated cluster features zoom to their expansion level instead of opening the info panel. When omitted or `false`, cluster clicks are ignored and only non-cluster features remain actionable.
     - Add `openUrl: true` on an interactive data layer to open each clicked feature's `url` property in a new tab instead of showing the info panel.
   - `customUi.panel`: Panel color and width.
     - Optional `imageSizeIsMax: true` uses each feature's `imageSize` as the maximum image box size in the info panel. Default is `false`, which keeps the current full-width behavior.
@@ -98,7 +99,7 @@ Some simple `config.json` samples can be found in folder `samples`. To load one 
 
 `http://localhost:5173/mapvibe/?config=samples/sample1/config.json`
 
-as the URL for testing. For imports and multi-layer backgrounds, file `samples/sample4/config.json` has a sample of use.
+as the URL for testing. For imports and multi-layer backgrounds, file `samples/sample4/config.json` has a sample of use. For clustered interactive points with click-to-zoom clusters, file `samples/sample5/config.json` shows `clusterInteractive: true`.
 
 Or, since the project will be used inside an iframe (with limited width and height), use :
 
@@ -271,6 +272,8 @@ const config: AppConfig = {
 ```
 
 For `openUrl` layers, each clicked feature is expected to expose a string `url` property in its GeoJSON `properties`. If `url` is missing, MapVibe logs a warning in the console and does not open a popup.
+
+For clustered GeoJSON sources, generated cluster features should be grouped into the same `dataLayers[].layerIds` entry as the leaf layer if they share one visibility toggle. `clusterInteractive: true` changes only click behavior for those generated cluster features; leaf features in the same data layer still use `openUrl` or the info panel.
 
 
 ## Notes

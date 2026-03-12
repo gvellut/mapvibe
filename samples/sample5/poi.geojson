@@ -1,0 +1,131 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "North Ridge",
+                "description": "<p>Short stop above the valley.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.214185,
+                    45.736743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Forest Cabin",
+                "description": "<p>Small cabin tucked into the trees.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.218185,
+                    45.734743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Rock Viewpoint",
+                "description": "<p>Wide view over the lake.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.220185,
+                    45.731743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Creek Crossing",
+                "description": "<p>Bridge crossing on the lower trail.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.223185,
+                    45.728743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "South Meadow",
+                "description": "<p>Open meadow with easy access.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.226185,
+                    45.726743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Quiet Bend",
+                "description": "<p>Sheltered corner near the path.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.229185,
+                    45.724743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Ridge Marker",
+                "description": "<p>Trail marker close to the crest.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.233185,
+                    45.722743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Upper Pasture",
+                "description": "<p>Grassy section above the tree line.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.238185,
+                    45.720743
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "title": "Eastern Spur",
+                "description": "<p>Lookout on the far side of the loop.</p>"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    6.243185,
+                    45.718743
+                ]
+            }
+        }
+    ]
+}
