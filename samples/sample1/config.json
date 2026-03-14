@@ -154,7 +154,9 @@
         "panel": {
             "backgroundColor": "#f8f9fa",
             "width": "250px",
-            "imageSizeIsMax": true
+            "imageSizeIsMax": true,
+            "marginRecenterOnOpen": 10,
+            "recenterOnOpen": true
         },
         "controls": {
             "zoom": true,
