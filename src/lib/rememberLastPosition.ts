@@ -1,3 +1,5 @@
+import { isFalseString, isTrueString } from './stringBoolean';
+
 export type RememberLastPositionValue = false | 0 | true | 1 | "page" | "domain";
 export type RememberLastPositionScope = false | "page" | "domain";
 
@@ -19,11 +21,11 @@ export function normalizeRememberLastPosition(value: unknown): RememberLastPosit
 
     if (typeof value === 'string') {
         const normalizedValue = value.trim().toLowerCase();
-        if (['false', '0', 'n', 'no'].includes(normalizedValue)) {
+        if (isFalseString(normalizedValue)) {
             return false;
         }
 
-        if (['true', '1', 'y', 'yes', 'page'].includes(normalizedValue)) {
+        if (isTrueString(normalizedValue) || normalizedValue === 'page') {
             return 'page';
         }
 

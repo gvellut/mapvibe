@@ -1,0 +1,4 @@
+Add a way to override the fullscreen button option (inside the config JSON / the customUi?.controls?.fullscreen in the config passed to React component MapVibeMap of lib), with parameters from the URL in App :
+- like RememberLastPosition and mobileCooperativeGestures : App will read a parameter from the URL, and set a separate boolean property on MapVibeMap : If not set that property can be null (then whatever is in the config JSON goes ; or the default if not there ie no fullscreen button)
+- If one of ['false', '0', 'n', 'no'] (like RememberLastPosition) : fullscreen will be disabled, no matter what the config JSON / customUI says. if one one ['true', '1', 'y', 'yes'] : fullscreen will be enabled no matter what the config says.
+- refactor ['false', '0', 'n', 'no'] to a isFalseString to be reused in multiple places. Same for isTrueString

@@ -7,3 +7,4 @@
 ! [Modify groups](A_tasks/G_Modify_groups.md)
 ! [Background for image](A_tasks/H_Background_for_image.md)
 ! [Click on cluster zoom](A_tasks/I_Click_on_cluster_zoom.md)
+! [Fullscreen override](A_tasks/J_Fullscreen_override.md)

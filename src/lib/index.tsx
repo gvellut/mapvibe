@@ -127,6 +127,7 @@ export interface MapVibeMapProps {
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
     mobileCooperativeGestures?: boolean,
     rememberLastPosition?: RememberLastPositionValue,
+    fullscreen?: boolean | null,
     ref?: React.Ref<MapVibeMapHandle>
 }
 
@@ -294,7 +295,7 @@ const MapCanvas = ({
 MapCanvas.displayName = 'MapCanvas';
 
 // --- REACT COMPONENTS ---
-export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, ref }: MapVibeMapProps) => {
+export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, fullscreen = null, ref }: MapVibeMapProps) => {
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
     const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);
@@ -421,7 +422,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
         }
 
-        if (currentConfig.customUi?.controls?.fullscreen) {
+        const fullscreenEnabled = fullscreen ?? currentConfig.customUi?.controls?.fullscreen ?? false;
+        if (fullscreenEnabled) {
             const fullscreenBtn = document.createElement('button');
             fullscreenBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-fullscreen-btn';
             fullscreenBtn.title = 'See larger';
@@ -445,7 +447,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         if (!hasRememberedViewState && !hasConfiguredCenterZoom && !hasConfiguredBounds && currentConfig.sources) {
             await fitMapToBounds(map, currentConfig.sources);
         }
-    }, [ensureConfiguredImportsLoaded, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
+    }, [ensureConfiguredImportsLoaded, fullscreen, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
 
     const onMapMoveEnd = useCallback(() => {
         const map = mapRef.current?.getMap();

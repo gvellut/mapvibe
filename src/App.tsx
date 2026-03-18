@@ -4,15 +4,18 @@ import {
     type RememberLastPositionScope,
     normalizeRememberLastPosition
 } from './lib/rememberLastPosition';
+import { normalizeOptionalBooleanString } from './lib/stringBoolean';
 
 const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
 const REMEMBER_LAST_POSITION_PARAM = "rlp";
+const FULLSCREEN_PARAM = "fs";
 
 const App: React.FC = () => {
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [mobileCooperativeGestures, setMobileCooperativeGestures] = useState<boolean>(true);
     const [rememberLastPosition, setRememberLastPosition] = useState<RememberLastPositionScope>(false);
+    const [fullscreen, setFullscreen] = useState<boolean | null>(null);
 
     useEffect(() => {
         const initializeApp = async () => {
@@ -20,11 +23,14 @@ const App: React.FC = () => {
             const configUrl = urlParams.get('config');
             const mobileCooperativeGesturesParam = urlParams.get(MOBILE_COOPERATIVE_GESTURES_PARAM);
             const rememberLastPositionParam = urlParams.get(REMEMBER_LAST_POSITION_PARAM);
+            const fullscreenParam = urlParams.get(FULLSCREEN_PARAM);
 
-            if (mobileCooperativeGesturesParam) {
-                setMobileCooperativeGestures(!['false', '0', 'n', 'no'].includes(mobileCooperativeGesturesParam.toLowerCase()));
+            const mobileCooperativeGesturesOverride = normalizeOptionalBooleanString(mobileCooperativeGesturesParam);
+            if (mobileCooperativeGesturesOverride !== null) {
+                setMobileCooperativeGestures(mobileCooperativeGesturesOverride);
             }
             setRememberLastPosition(normalizeRememberLastPosition(rememberLastPositionParam));
+            setFullscreen(normalizeOptionalBooleanString(fullscreenParam));
 
             if (!configUrl) {
                 setError('Error: The `config` URL parameter is missing.');
@@ -64,6 +70,7 @@ const App: React.FC = () => {
             config={config}
             mobileCooperativeGestures={mobileCooperativeGestures}
             rememberLastPosition={rememberLastPosition}
+            fullscreen={fullscreen}
         />
     );
 };

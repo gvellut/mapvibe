@@ -38,13 +38,15 @@ In `"customUi" > "panel"`,  to recenter marker when it would be covered by info 
 "recenterOnOpen": true
 ```
 
-To enable cooperativeGestures (`ctrl + scroll` to zoom on desktop + 2 finger pan on mobile), add `cooperativeGestures=y` to URL. That parameter will be removed when opening the map in fullscreen using the fullscreen button.
+To enable cooperative gestures (`ctrl + scroll` to zoom on desktop + 2 finger pan on mobile) in the standalone `/mapvibe` app, add `mgc=y` to the URL. `mgc=0`, `mgc=n`, or `mgc=no` disables it. That parameter is forced to `mgc=n` when opening the map in a new tab from the fullscreen button.
 
 To remember the last map position, use `rlp=page` or `rlp=domain` in the standalone `/mapvibe` URL:
 - `rlp=page` remembers pan/zoom per host + path
 - `rlp=domain` remembers pan/zoom per host across paths
 - `rlp=1` is the same as `rlp=page`
 - `rlp=0` disables the feature and ignores any saved position
+
+To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. When `fs` is absent, the app defers to `customUi.controls.fullscreen` in the config JSON.
 
 When enabled, the remembered position takes precedence over `center`, `zoom`, `bounds`, and auto-fit-to-data on reload.
 
