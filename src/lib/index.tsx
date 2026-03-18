@@ -10,7 +10,10 @@ import {
 
 // defined in css: width of map smaller than that : infopanel takes full size
 const INFO_PANEL_DESKTOP_WIDTH = 450;
+// params defined in App.tsx
+// TODO share?
 const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
+const FULLSCREEN_PARAM = "fs";
 const IMPORT_NAMESPACE_PREFIX = "__imports_";
 const DEFAULT_IMPORTED_SPRITE_ID = "default";
 const RESOLVED_IMAGE_PROPERTIES = [
@@ -431,7 +434,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
             fullscreenBtn.onclick = () => {
                 const url = new URL(window.location.href);
                 // make sure no cooperative gestures on full screen tab : touch is only for the map
-                url.searchParams.set(MOBILE_COOPERATIVE_GESTURES_PARAM, 'n');
+                url.searchParams.set(MOBILE_COOPERATIVE_GESTURES_PARAM, 'no');
+                url.searchParams.set(FULLSCREEN_PARAM, 'no');
                 window.open(url.href, '_blank');
             };
             map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);

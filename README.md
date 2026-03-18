@@ -46,7 +46,7 @@ To remember the last map position, use `rlp=page` or `rlp=domain` in the standal
 - `rlp=1` is the same as `rlp=page`
 - `rlp=0` disables the feature and ignores any saved position
 
-To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. When `fs` is absent, the app defers to `customUi.controls.fullscreen` in the config JSON.
+To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. When `fs` is absent, the app defers to `customUi.controls.fullscreen` in the config JSON. The fullscreen button opens the new tab with `fs=no` so that view does not show another fullscreen button.
 
 When enabled, the remembered position takes precedence over `center`, `zoom`, `bounds`, and auto-fit-to-data on reload.
 

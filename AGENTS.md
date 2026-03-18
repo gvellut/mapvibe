@@ -68,4 +68,5 @@ When finishing the work, update this AGENTS.md with consideration for future wor
 - `customUi.dataLayers[].clusterInteractive` is an opt-in flag for clustered interactive GeoJSON layers. When `true`, generated cluster features zoom to their expansion zoom and do not open the info panel; leaf features in the same data layer keep the existing `openUrl` or info-panel behavior.
 - Standalone `App` supports URL overrides for `MapVibeMap` runtime props: `mgc` for mobile cooperative gestures, `rlp` for remembered position, and `fs` for the fullscreen button.
 - `MapVibeMap` exposes a top-level nullable `fullscreen` prop. `null` defers to `config.customUi.controls.fullscreen`; `true`/`false` force-enable or force-disable the button.
+- The custom fullscreen button opens a new tab with `mgc=n` and `fs=no`, so the fullscreen view disables cooperative gestures and hides the fullscreen button itself.
 - Shared boolean-string parsing lives in `src/lib/stringBoolean.ts`; reuse `isFalseString`, `isTrueString`, or `normalizeOptionalBooleanString` instead of duplicating accepted string lists.
