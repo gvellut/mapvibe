@@ -123,6 +123,7 @@ export interface MapVibeMapHandle {
     getMap: () => maplibregl.Map | null;
     getLayerIdsForBackgroundLayer: (id: string) => string[];
     getImportInfo: (id: string) => MapVibeImportInfo | null;
+    closeInfoPanel: () => void;
 }
 
 export interface MapVibeMapProps {
@@ -353,7 +354,8 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
     React.useImperativeHandle(ref, () => ({
         getMap: () => mapRef.current?.getMap() ?? null,
         getLayerIdsForBackgroundLayer: (id: string) => getBackgroundLayerIds(id, backgroundCatalogRef.current, backgroundRuntimeRef.current),
-        getImportInfo: (id: string) => getImportInfo(backgroundRuntimeRef.current, id)
+        getImportInfo: (id: string) => getImportInfo(backgroundRuntimeRef.current, id),
+        closeInfoPanel: () => setInfoPanelVisible(false)
     }), []);
 
     const applySelectedBackground = useCallback((backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => {
