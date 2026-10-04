@@ -56,6 +56,11 @@ Mapvibe config files are based on the MapLibre style JSON format, but they also 
 - The top style remains authoritative for map title, initial center/zoom/bounds, and the main style document. Imported styles contribute background layers plus their own supporting sources/sprites/glyphs.
 - Imports behave as background members referenced from `backgroundLayers[].layerIds` even though they may expand to many concrete layers at runtime.
 
+## Example
+
+An example of project using this map control:
+
+/Users/guilhem/dev/projects/github/webcams_maps
 
 ## AGENTS.md
 
