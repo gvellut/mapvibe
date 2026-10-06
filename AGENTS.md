@@ -8,6 +8,10 @@ A static map interface for embedding in blog posts or websites, as a Google My M
 - React: Simple component
 - Vite
 
+### lint / formatting
+
+For code changes, run `npm run lint` and `npm run fmt:check`. Apply `npm run lint:fix` or `npm run fmt` only when their changes belong to the requested task; do not rewrite unrelated files to satisfy these checks. Keep lint rules and formatting preferences in the shared root configurations so CLI and VS Code use the same settings.
+
 ## Lib and app
 
 ### Lib (React component)
