@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import maplibregl, { LngLatBounds, type AddProtocolAction, type GeoJSONSource, type MapGeoJSONFeature } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import {
+    LngLatBounds,
+    type AddProtocolAction,
+    type GeoJSONSource,
+    type MapGeoJSONFeature,
+    type MissingStyleImageResolver
+} from 'maplibre-gl';
 import './style.scss';
 import {
     type RememberLastPositionValue,
@@ -154,7 +161,7 @@ interface MapProps {
     onDrag?: () => void;
     onMoveEnd?: () => void;
     onDblClick?: () => void;
-    onStyleImageMissing?: (e: any) => void;
+    resolveMissingStyleImage?: MissingStyleImageResolver;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
     mobileCooperativeGestures?: boolean;
     ref?: React.Ref<MapInstanceHandle>;
@@ -223,7 +230,7 @@ const MapCanvas = ({
     onDrag,
     onMoveEnd,
     onDblClick,
-    onStyleImageMissing,
+    resolveMissingStyleImage,
     customProtocols,
     mobileCooperativeGestures,
     ref
@@ -283,8 +290,9 @@ const MapCanvas = ({
             map.on('dblclick', onDblClick);
         }
 
-        if (onStyleImageMissing) {
-            map.on('styleimagemissing', onStyleImageMissing);
+        if (resolveMissingStyleImage) {
+            // MapLibre waits for the resolver before rendering features with custom icons.
+            map.setMissingStyleImageResolver(resolveMissingStyleImage);
         }
 
         return () => {
@@ -394,11 +402,11 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         }
     }, [applySelectedBackground]);
 
-    const handleStyleImageMissing = useCallback(async (e: any) => {
+    const resolveMissingStyleImage = useCallback(async (imageId: string) => {
         const map = mapRef.current?.getMap();
         const currentConfig = configRef.current;
         if (!map || !currentConfig) return;
-        await loadCustomImageOnDemand(map, currentConfig, e.id);
+        await loadCustomImageOnDemand(map, currentConfig, imageId);
     }, []);
 
     const onMapLoad = useCallback(async () => {
@@ -585,7 +593,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                     setInfoPanelVisible(false);
                     setLayerChooserVisible(false);
                 }}
-                onStyleImageMissing={handleStyleImageMissing}
+                resolveMissingStyleImage={resolveMissingStyleImage}
                 customProtocols={customProtocols}
             />
 

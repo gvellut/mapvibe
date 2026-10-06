@@ -47,7 +47,7 @@
         "url": "https://github.com/gvellut/mapvibe.git"
     },
     "peerDependencies": {
-        "maplibre-gl": "^5.0.0",
+        "maplibre-gl": "^6.11.2",
         "react": "^19.0.0",
         "react-dom": "^19.0.0"
     },

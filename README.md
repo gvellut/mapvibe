@@ -157,15 +157,26 @@ npm install mapvibe
 ### Peer Dependencies
 
 MapVibe requires the following peer dependencies:
-- `react` (^18.0.0 || ^19.0.0)
-- `react-dom` (^18.0.0 || ^19.0.0)
-- `maplibre-gl` (^4.0.0 || ^5.0.0)
+- `react` (^19.0.0)
+- `react-dom` (^19.0.0)
+- `maplibre-gl` (^6.11.2)
 
 Make sure to install them if not already present:
 
 ```bash
 npm install react react-dom maplibre-gl
 ```
+
+MapLibre 6 requires bundler applications to configure its worker URL before rendering a map. The standalone app handles this in `src/main.tsx`. For a Vite application embedding the library, add the following to the application's entry point:
+
+```ts
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+setWorkerUrl(workerUrl);
+```
+
+The `?worker&url` import bundles the worker's shared dependencies for production. See [MapLibre's installation guide](https://maplibre.org/maplibre-gl-js/docs/#installation) for other bundlers.
 
 ### Basic Usage
 

@@ -72,6 +72,7 @@ When finishing the work, update this AGENTS.md with consideration for future wor
 
 ## Recent Notes
 
+- When upgrading dependencies, validate the standalone app's sample page as well as its build; type checking alone does not verify worker startup or custom marker image loading.
 - `InfoPanelData` now supports an optional `imageBackgroundColor` string copied from interactive feature properties, alongside `imageUrl`, `imageSize`, and `imagePadding`.
 - The info panel applies `imageBackgroundColor` to the outer image wrapper div, so GeoJSON feature properties can control the fill behind contained images.
 - `customUi.dataLayers[].clusterInteractive` is an opt-in flag for clustered interactive GeoJSON layers. When `true`, generated cluster features zoom to their expansion zoom and do not open the info panel; leaf features in the same data layer keep the existing `openUrl` or info-panel behavior.
