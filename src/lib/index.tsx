@@ -1507,10 +1507,6 @@ function rebaseSourceUrls(sourceDefinition: any, baseUrl: string) {
         sourceDefinition.glyphs = resolveMaybeRelativeUrl(sourceDefinition.glyphs, baseUrl);
     }
 
-    if (typeof sourceDefinition.attribution === 'string') {
-        sourceDefinition.attribution = sourceDefinition.attribution;
-    }
-
     if (Array.isArray(sourceDefinition.tiles)) {
         sourceDefinition.tiles = sourceDefinition.tiles.map((tileUrl: any) =>
             typeof tileUrl === 'string' ? resolveMaybeRelativeUrl(tileUrl, baseUrl) : tileUrl
