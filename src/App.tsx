@@ -77,7 +77,7 @@ const App: React.FC = () => {
     }
 
     if (!config) {
-        return <div>Loading...</div>;
+        return null;
     }
 
     return <MapVibeMap config={config} runtimeOptions={runtimeOptions} />;
