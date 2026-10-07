@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { MapVibeMap, type AppConfig } from './lib';
-import {
-    type RememberLastPositionScope,
-    normalizeRememberLastPosition
-} from './lib/rememberLastPosition';
+import { MapVibeMap, type AppConfig, type MapVibeRuntimeOptions } from './lib';
+import { normalizeRememberLastPosition } from './lib/rememberLastPosition';
 import { normalizeOptionalBooleanString } from './lib/stringBoolean';
 
-const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
-const REMEMBER_LAST_POSITION_PARAM = "rlp";
-const FULLSCREEN_PARAM = "fs";
+const MOBILE_COOPERATIVE_GESTURES_PARAM = 'mgc';
+const REMEMBER_LAST_POSITION_PARAM = 'rlp';
+const FULLSCREEN_PARAM = 'fs';
 
 const App: React.FC = () => {
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [mobileCooperativeGestures, setMobileCooperativeGestures] = useState<boolean>(true);
-    const [rememberLastPosition, setRememberLastPosition] = useState<RememberLastPositionScope>(false);
-    const [fullscreen, setFullscreen] = useState<boolean | null>(null);
+    const [runtimeOptions, setRuntimeOptions] = useState<MapVibeRuntimeOptions>({});
 
     useEffect(() => {
         const initializeApp = async () => {
@@ -25,12 +20,28 @@ const App: React.FC = () => {
             const rememberLastPositionParam = urlParams.get(REMEMBER_LAST_POSITION_PARAM);
             const fullscreenParam = urlParams.get(FULLSCREEN_PARAM);
 
-            const mobileCooperativeGesturesOverride = normalizeOptionalBooleanString(mobileCooperativeGesturesParam);
+            const options: MapVibeRuntimeOptions = {};
+            const mobileCooperativeGesturesOverride = normalizeOptionalBooleanString(
+                mobileCooperativeGesturesParam
+            );
             if (mobileCooperativeGesturesOverride !== null) {
-                setMobileCooperativeGestures(mobileCooperativeGesturesOverride);
+                options.mobileCooperativeGestures = mobileCooperativeGesturesOverride;
             }
-            setRememberLastPosition(normalizeRememberLastPosition(rememberLastPositionParam));
-            setFullscreen(normalizeOptionalBooleanString(fullscreenParam));
+            const fullscreenOverride = normalizeOptionalBooleanString(fullscreenParam);
+            if (fullscreenOverride !== null) {
+                options.controls = { fullscreen: fullscreenOverride };
+            }
+            // Missing or invalid URL values defer to JSON instead of forcing the runtime default.
+            const rememberScope = rememberLastPositionParam?.trim().toLowerCase();
+            if (
+                normalizeOptionalBooleanString(rememberLastPositionParam) !== null ||
+                rememberScope === 'page' ||
+                rememberScope === 'domain'
+            ) {
+                options.rememberLastPosition =
+                    normalizeRememberLastPosition(rememberLastPositionParam);
+            }
+            setRuntimeOptions(options);
 
             if (!configUrl) {
                 setError('Error: The `config` URL parameter is missing.');
@@ -50,7 +61,9 @@ const App: React.FC = () => {
 
                 setConfig(configData);
             } catch (err) {
-                setError(`Error initializing application: ${err instanceof Error ? err.message : String(err)}`);
+                setError(
+                    `Error initializing application: ${err instanceof Error ? err.message : String(err)}`
+                );
             }
         };
 
@@ -58,21 +71,16 @@ const App: React.FC = () => {
     }, []);
 
     if (error) {
-        return <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'red' }}>{error}</div>;
+        return (
+            <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'red' }}>{error}</div>
+        );
     }
 
     if (!config) {
         return <div>Loading...</div>;
     }
 
-    return (
-        <MapVibeMap
-            config={config}
-            mobileCooperativeGestures={mobileCooperativeGestures}
-            rememberLastPosition={rememberLastPosition}
-            fullscreen={fullscreen}
-        />
-    );
+    return <MapVibeMap config={config} runtimeOptions={runtimeOptions} />;
 };
 
 export default App;

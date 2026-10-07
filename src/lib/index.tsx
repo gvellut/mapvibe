@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import * as maplibregl from 'maplibre-gl';
 import {
     LngLatBounds,
@@ -14,13 +15,29 @@ import {
     loadRememberedViewState,
     saveRememberedViewState
 } from './rememberLastPosition';
+import {
+    type ControlsConfig,
+    type InteractionConfig,
+    type MapVibeRuntimeOptions,
+    resolveMapOptions
+} from './controlConfig';
+import { installControls } from './controls';
+import { applyInteractions } from './interactions';
+
+export type {
+    ControlAlias,
+    ControlConfig,
+    ControlName,
+    ControlsConfig,
+    ControlVisibilityOverrides,
+    InteractionConfig,
+    MapVibeRuntimeOptions
+} from './controlConfig';
+export type { RememberLastPositionValue, RememberLastPositionScope } from './rememberLastPosition';
 
 // defined in css: width of map smaller than that : infopanel takes full size
 const INFO_PANEL_DESKTOP_WIDTH = 450;
-// params defined in App.tsx
-// TODO share?
-const MOBILE_COOPERATIVE_GESTURES_PARAM = "mgc";
-const FULLSCREEN_PARAM = "fs";
+// URL overrides are parsed by App; the new-tab control sets mgc/fs in controls.ts.
 const IMPORT_NAMESPACE_PREFIX = "__imports_";
 const DEFAULT_IMPORTED_SPRITE_ID = "default";
 const RESOLVED_IMAGE_PROPERTIES = [
@@ -65,13 +82,9 @@ export interface CustomUiConfig {
         recenterOnOpen?: boolean;
         marginRecenterOnOpen?: number;
     };
-    controls: {
-        zoom?: boolean;
-        scale?: boolean;
-        layerChooser?: boolean;
-        fullscreen?: boolean;
-        attribution?: boolean;
-    };
+    controls?: ControlsConfig;
+    interaction?: InteractionConfig;
+    rememberLastPosition?: RememberLastPositionValue;
     imports?: StyleImportConfig[];
     backgroundLayers: BackgroundLayerConfig[];
     dataLayers: DataLayerConfig[];
@@ -134,12 +147,16 @@ export interface MapVibeMapHandle {
 }
 
 export interface MapVibeMapProps {
-    config: AppConfig,
-    customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>,
-    mobileCooperativeGestures?: boolean,
-    rememberLastPosition?: RememberLastPositionValue,
-    fullscreen?: boolean | null,
-    ref?: React.Ref<MapVibeMapHandle>
+    config: AppConfig;
+    customProtocols?: Array<{ name: string; loadFn: AddProtocolAction }>;
+    runtimeOptions?: MapVibeRuntimeOptions;
+    /** Compatibility alias; prefer runtimeOptions.mobileCooperativeGestures. */
+    mobileCooperativeGestures?: boolean;
+    /** Compatibility alias; prefer runtimeOptions.rememberLastPosition. */
+    rememberLastPosition?: RememberLastPositionValue;
+    /** Compatibility alias; prefer runtimeOptions.controls.fullscreen. */
+    fullscreen?: boolean | null;
+    ref?: React.Ref<MapVibeMapHandle>;
 }
 
 interface MapInstanceHandle {
@@ -163,7 +180,7 @@ interface MapProps {
     onDblClick?: () => void;
     resolveMissingStyleImage?: MissingStyleImageResolver;
     customProtocols?: Array<{ name: string, loadFn: AddProtocolAction }>;
-    mobileCooperativeGestures?: boolean;
+    interaction: Required<InteractionConfig>;
     ref?: React.Ref<MapInstanceHandle>;
 }
 
@@ -232,7 +249,7 @@ const MapCanvas = ({
     onDblClick,
     resolveMissingStyleImage,
     customProtocols,
-    mobileCooperativeGestures,
+    interaction,
     ref
 }: MapProps) => {
     const mapContainer = useRef<HTMLDivElement>(null);
@@ -262,13 +279,7 @@ const MapCanvas = ({
 
         const map = mapInstance.current;
 
-        if (mobileCooperativeGestures && isMobile()) {
-            map.cooperativeGestures.enable();
-        }
-
-        map.dragRotate.disable();
-        map.touchZoomRotate.disableRotation();
-        map.touchPitch.disable();
+        applyInteractions(map, interaction, isMobile());
 
         if (onLoad) {
             map.on('load', onLoad);
@@ -307,7 +318,23 @@ const MapCanvas = ({
 MapCanvas.displayName = 'MapCanvas';
 
 // --- REACT COMPONENTS ---
-export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures = true, rememberLastPosition = false, fullscreen = null, ref }: MapVibeMapProps) => {
+export const MapVibeMap = ({
+    config,
+    customProtocols,
+    runtimeOptions,
+    mobileCooperativeGestures,
+    rememberLastPosition,
+    fullscreen,
+    ref
+}: MapVibeMapProps) => {
+    // Map options are resolved once, matching the map's initialization-based lifecycle.
+    const [resolvedOptions] = useState(() =>
+        resolveMapOptions(config.customUi, runtimeOptions, {
+            mobileCooperativeGestures,
+            rememberLastPosition,
+            fullscreen
+        })
+    );
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
     const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);
@@ -320,6 +347,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
     const backgroundRuntimeRef = useRef<BackgroundRuntimeState>(createBackgroundRuntimeState());
 
     const [layerChooserVisible, setLayerChooserVisible] = useState(false);
+    const [layerChooserHost, setLayerChooserHost] = useState<HTMLElement | null>(null);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
     const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState(backgroundCatalog.initialSelection);
@@ -327,7 +355,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
     const [visibleDataLayers, setVisibleDataLayers] = useState(new Set(backgroundCatalog.initialVisibleDataLayerIds));
     const visibleDataLayersRef = useRef(new Set(backgroundCatalog.initialVisibleDataLayerIds));
 
-    const rememberLastPositionScope = normalizeRememberLastPosition(rememberLastPosition);
+    const rememberLastPositionScope = normalizeRememberLastPosition(resolvedOptions.rememberLastPosition);
     const rememberedViewState = useMemo(
         () => loadRememberedViewState(rememberLastPositionScope),
         [rememberLastPositionScope]
@@ -423,33 +451,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         );
         applyDataLayerVisibilitySelection(map, backgroundCatalogRef.current, visibleDataLayersRef.current);
 
-        if (currentConfig.customUi?.controls?.scale) {
-            map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
-        }
-
-        if (currentConfig.customUi?.controls?.zoom) {
-            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
-        }
-
-        if (currentConfig.customUi?.controls?.attribution) {
-            map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
-        }
-
-        const fullscreenEnabled = fullscreen ?? currentConfig.customUi?.controls?.fullscreen ?? false;
-        if (fullscreenEnabled) {
-            const fullscreenBtn = document.createElement('button');
-            fullscreenBtn.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-fullscreen-btn';
-            fullscreenBtn.title = 'See larger';
-            fullscreenBtn.innerHTML = '<span></span>';
-            fullscreenBtn.onclick = () => {
-                const url = new URL(window.location.href);
-                // make sure no cooperative gestures on full screen tab : touch is only for the map
-                url.searchParams.set(MOBILE_COOPERATIVE_GESTURES_PARAM, 'no');
-                url.searchParams.set(FULLSCREEN_PARAM, 'no');
-                window.open(url.href, '_blank');
-            };
-            map.getContainer().querySelector('.maplibregl-ctrl-top-left')?.appendChild(fullscreenBtn);
-        }
+        installControls(map, resolvedOptions.controls, setLayerChooserHost);
 
         map.on('mousemove', (e) => {
             const action = getInteractiveFeatureActionAtPoint(map, e.point, backgroundCatalogRef.current);
@@ -461,7 +463,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
         if (!hasRememberedViewState && !hasConfiguredCenterZoom && !hasConfiguredBounds && currentConfig.sources) {
             await fitMapToBounds(map, currentConfig.sources);
         }
-    }, [ensureConfiguredImportsLoaded, fullscreen, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
+    }, [ensureConfiguredImportsLoaded, resolvedOptions.controls, hasConfiguredBounds, hasConfiguredCenterZoom, hasRememberedViewState]);
 
     const onMapMoveEnd = useCallback(() => {
         const map = mapRef.current?.getMap();
@@ -584,7 +586,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 initialViewState={initialViewState}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
-                mobileCooperativeGestures={mobileCooperativeGestures}
+                interaction={resolvedOptions.interaction}
                 onLoad={onMapLoad}
                 onClick={onMapClick}
                 onDrag={() => setLayerChooserVisible(false)}
@@ -597,25 +599,23 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
                 customProtocols={customProtocols}
             />
 
-            {config.customUi?.controls && (
-                <>
-                    {config.customUi.controls.layerChooser && (
-                        <LayerChooser
-                            backgroundLayers={backgroundCatalog.backgroundEntries}
-                            dataLayers={backgroundCatalog.dataLayerEntries}
-                            visible={layerChooserVisible}
-                            onToggle={() => {
-                                setLayerChooserVisible(!layerChooserVisible);
-                                setInfoPanelVisible(false);
-                            }}
-                            selectedBackgroundLayer={selectedBackgroundLayer}
-                            visibleDataLayers={visibleDataLayers}
-                            onBackgroundLayerChange={handleBackgroundLayerChange}
-                            onDataLayerToggle={handleDataLayerToggle}
-                        />
-                    )}
-                </>
-            )}
+            {layerChooserHost &&
+                createPortal(
+                    <LayerChooser
+                        backgroundLayers={backgroundCatalog.backgroundEntries}
+                        dataLayers={backgroundCatalog.dataLayerEntries}
+                        visible={layerChooserVisible}
+                        onToggle={() => {
+                            setLayerChooserVisible(!layerChooserVisible);
+                            setInfoPanelVisible(false);
+                        }}
+                        selectedBackgroundLayer={selectedBackgroundLayer}
+                        visibleDataLayers={visibleDataLayers}
+                        onBackgroundLayerChange={handleBackgroundLayerChange}
+                        onDataLayerToggle={handleDataLayerToggle}
+                    />,
+                    layerChooserHost
+                )}
 
             {infoPanelVisible && (
                 <InfoPanel
@@ -630,7 +630,7 @@ export const MapVibeMap = ({ config, customProtocols, mobileCooperativeGestures 
 
 MapVibeMap.displayName = 'MapVibeMap';
 
-// Layer Chooser Component
+// Layer Chooser Component, rendered inside its MapLibre control host.
 const LayerChooser: React.FC<{
     backgroundLayers: BackgroundLayerConfig[];
     dataLayers: DataLayerConfig[];
@@ -642,8 +642,7 @@ const LayerChooser: React.FC<{
     onDataLayerToggle: (layerId: string, visible: boolean) => void;
 }> = ({ backgroundLayers, dataLayers, visible, onToggle, selectedBackgroundLayer, visibleDataLayers, onBackgroundLayerChange, onDataLayerToggle }) => {
     return (
-        <div className="maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser"
-            style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000 }}>
+        <>
             <button
                 className="layer-chooser-btn"
                 type="button"
@@ -680,7 +679,7 @@ const LayerChooser: React.FC<{
                     ))}
                 </div>
             )}
-        </div>
+        </>
     );
 };
 

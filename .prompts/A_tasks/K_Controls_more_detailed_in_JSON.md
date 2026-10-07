@@ -7,7 +7,7 @@ in customUI section of the config JSON :
             "fullscreen": true,
             "attribution": true
         },
-    => propose some format to allow config of controls : 
+    => propose and implement some format to allow config of controls : 
     - which controls to show (may have multiple types for the same : for ex : I want to keep the layer chooser as it is now but also add a simplified version with other characteristics and different config option). Try to reference a control class name or some simplified version like the class name without control (see if hte maplibre controls follow that convention) or allow the 2. Do not make it too complex. Keep the list of controls explicit (ie list all the possible controls and amtch them iwth the incoming config ; will add new controls inside mapvibe code). It could also be possible to have a facade to the maplibre control so arg processing is done there, but not necessary if possible to do without. If control name is not recognized, log it in the console but keep processing the rest (do not fail).
         - if controls is mentioned : equivalent to the true in the current simplified config. Have a visible attribute : true / false (default true) : so can configure some value with the presence of hte control decided with a URL param.
     - some control config options : find out which option Maplibre controls support
@@ -20,7 +20,7 @@ in customUI section of the config JSON :
     - put the URL params in a structure passed as one arg to the lib instead of all separates like now.
 
 - support the controls used now
-- also add GeolocateControl (standard from maplibre) 
+- also add GeolocateControl (standard from maplibre)
 
 - put all the interaction controls / setting / map interaction setting processing in a function instead of directly in mapLoad.
 

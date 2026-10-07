@@ -1,0 +1,71 @@
+{
+    "title": "Configurable Controls Sample",
+    "version": 8,
+    "center": [6.224185, 45.728743],
+    "zoom": 11.5,
+    "sources": {
+        "poi": {
+            "type": "geojson",
+            "data": {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": { "type": "Point", "coordinates": [6.224185, 45.728743] },
+                        "properties": {
+                            "title": "Controls sample",
+                            "description": "Use the layer chooser to switch backgrounds or hide this point."
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "layers": [
+        { "id": "light", "type": "background", "paint": { "background-color": "#e8eef2" } },
+        { "id": "dark", "type": "background", "paint": { "background-color": "#263544" } },
+        {
+            "id": "poi",
+            "type": "circle",
+            "source": "poi",
+            "paint": {
+                "circle-radius": 10,
+                "circle-color": "#e6504a",
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2
+            }
+        }
+    ],
+    "customUi": {
+        "panel": { "backgroundColor": "#f8f9fa", "width": "250px" },
+        "controls": {
+            "NavigationControl": {
+                "position": "top-left",
+                "options": { "showCompass": true, "visualizePitch": true }
+            },
+            "Scale": { "options": { "unit": "nautical", "maxWidth": 120 } },
+            "LayerChooser": { "position": "top-right" },
+            "OpenInNewTab": { "position": "top-left" },
+            "Attribution": {
+                "options": { "compact": true, "customAttribution": "Mapvibe controls sample" }
+            },
+            "Geolocate": {
+                "options": { "trackUserLocation": true, "fitBoundsOptions": { "maxZoom": 13 } }
+            }
+        },
+        "interaction": {
+            "dragRotate": true,
+            "touchRotation": true,
+            "touchPitch": true,
+            "mobileCooperativeGestures": true
+        },
+        "rememberLastPosition": false,
+        "backgroundLayers": [
+            { "id": "light", "name": "Light", "layerIds": ["light"], "visible": true },
+            { "id": "dark", "name": "Dark", "layerIds": ["dark"] }
+        ],
+        "dataLayers": [
+            { "id": "poi", "name": "Sample point", "layerIds": ["poi"], "interactive": true }
+        ]
+    }
+}

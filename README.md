@@ -24,10 +24,55 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
   - `customUi.panel`: Panel color and width.
     - Optional `imageSizeIsMax: true` uses each feature's `imageSize` as the maximum image box size in the info panel. Default is `false`, which keeps the current full-width behavior.
     - Info panel features can also provide `imageBackgroundColor` as a hex color string such as `#000000` to fill the image wrapper behind the image.
-  - `customUi.controls`: Which UI controls to show (zoom, scale, layer chooser, fullscreen, attribution).
+  - `customUi.controls`: Named controls with visibility, position, and constructor options (see below).
+  - `customUi.interaction`: Optional gesture settings (see below).
+  - `customUi.rememberLastPosition`: Optional remembered-position default; accepts `false`, `0`, `true`, `1`, `"page"`, or `"domain"`. Default: `false`.
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
 - On startup, MapVibe hides all top-style layers first, then applies visibility from `customUi.backgroundLayers` and `customUi.dataLayers`. Raw top-style `layout.visibility` does not control initial visibility.
 - The layer chooser still uses a single selected background at a time. Selecting a background entry hides the other managed backgrounds and restores that entry's top-style/import members as one virtual background.
+
+### Controls and interactions
+
+Each `controls` entry accepts a boolean or `{ visible?, position?, options? }`. An object enables the control unless `visible` is `false`. Positions are `top-left`, `top-right`, `bottom-left`, and `bottom-right`.
+
+```json
+"controls": {
+  "NavigationControl": { "options": { "showCompass": false } },
+  "Scale": { "position": "bottom-right", "options": { "unit": "metric", "maxWidth": 120 } },
+  "layerChooser": true,
+  "fullscreen": true,
+  "Attribution": { "position": "bottom-left", "options": { "compact": true } },
+  "Geolocate": { "visible": false, "options": { "trackUserLocation": true } }
+}
+```
+
+Names are case-sensitive. Accept the full name below, the same name without `Control`, or the legacy alias. Supported controls are explicitly registered in Mapvibe; unknown names warn in the console and are skipped. Duplicate aliases for one type use the first entry.
+
+| Control | Legacy alias | Default position | `options` |
+| --- | --- | --- | --- |
+| `NavigationControl` | `zoom` | `top-left` | `showZoom`, `showCompass`, `visualizePitch`, `visualizeRoll` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/NavigationControlOptions/)) |
+| `ScaleControl` | `scale` | `bottom-right` | `unit`: `metric`, `imperial`, or `nautical`; `maxWidth` in pixels ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/ScaleControlOptions/)) |
+| `LayerChooserControl` | `layerChooser` | `top-right` | None |
+| `OpenInNewTabControl` | `fullscreen` | `top-left` | None; opens the current URL in a new tab |
+| `AttributionControl` | `attribution` | `bottom-left` | `compact`, `customAttribution` (string or array) ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/AttributionControlOptions/)) |
+| `GeolocateControl` | `geolocate` | `top-left` | `positionOptions`, `fitBoundsOptions`, `trackUserLocation`, `showUserLocation`, `showAccuracyCircle` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/GeolocateControlOptions/)) |
+
+When `controls` is absent, the existing five controls are enabled with their positions above, zoom buttons without a compass, metric scale, and expanded attribution. Geolocation is disabled. An explicit object enables only its listed entries; `{}` enables none. Options inherit those defaults, then pass directly to MapLibre. Geolocation requires browser support, a secure context (HTTPS or localhost), and permission; an iframe host may also need `allow="geolocation"`. It requests location when its button is used.
+
+The following `interaction` defaults preserve current behavior. Missing fields inherit these values:
+
+```json
+"interaction": {
+  "dragRotate": false,
+  "touchRotation": false,
+  "touchPitch": false,
+  "mobileCooperativeGestures": true
+}
+```
+
+`dragRotate` enables mouse rotation and pitch. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
+
+[Sample 6](samples/sample6/config.json) demonstrates the richer format; samples 1–5 retain legacy boolean controls.
 
 ### Notes
 
@@ -38,7 +83,7 @@ In `"customUi" > "panel"`,  to recenter marker when it would be covered by info 
 "recenterOnOpen": true
 ```
 
-To enable cooperative gestures (`ctrl + scroll` to zoom on desktop + 2 finger pan on mobile) in the standalone `/mapvibe` app, add `mgc=y` to the URL. `mgc=0`, `mgc=n`, or `mgc=no` disables it. That parameter is forced to `mgc=n` when opening the map in a new tab from the fullscreen button.
+To override mobile cooperative gestures (two-finger pan on mobile) in the standalone `/mapvibe` app, add `mgc=y` to the URL. `mgc=0`, `mgc=n`, or `mgc=no` disables it. The fullscreen button opens its new tab with `mgc=no`.
 
 To remember the last map position, use `rlp=page` or `rlp=domain` in the standalone `/mapvibe` URL:
 - `rlp=page` remembers pan/zoom per host + path
@@ -46,7 +91,9 @@ To remember the last map position, use `rlp=page` or `rlp=domain` in the standal
 - `rlp=1` is the same as `rlp=page`
 - `rlp=0` disables the feature and ignores any saved position
 
-To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. When `fs` is absent, the app defers to `customUi.controls.fullscreen` in the config JSON. The fullscreen button opens the new tab with `fs=no` so that view does not show another fullscreen button.
+To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. Visibility overrides preserve the control's configured options and position. The fullscreen button opens the new tab with `fs=no` so that view does not show another fullscreen button.
+
+Absent or invalid `mgc`, `rlp`, and `fs` values defer to JSON and then defaults. URL parsing stays in the standalone app; it passes one `runtimeOptions` prop to the library. No URL overrides are provided for the other controls.
 
 When enabled, the remembered position takes precedence over `center`, `zoom`, `bounds`, and auto-fit-to-data on reload.
 
@@ -185,13 +232,28 @@ import { MapVibeMap, type AppConfig } from 'mapvibe';
 import 'mapvibe/style.css';
 
 function App({ config }: { config: AppConfig }) {
-  return <MapVibeMap config={config} rememberLastPosition="page" />;
+  return <MapVibeMap config={config} runtimeOptions={{ rememberLastPosition: "page" }} />;
 }
 ```
 
 `MapVibeMap` is the embeddable component for host applications. If you want the standalone app that reads a `config` URL parameter, use the built website output described earlier in this README.
 
-`rememberLastPosition` accepts `false | 0 | true | 1 | "page" | "domain"`.
+Use `runtimeOptions` for host-provided overrides:
+
+```tsx
+<MapVibeMap
+  config={config}
+  runtimeOptions={{
+    controls: { fullscreen: false, Geolocate: true },
+    mobileCooperativeGestures: false,
+    rememberLastPosition: "page"
+  }}
+/>
+```
+
+`runtimeOptions.controls` accepts the registered control names and aliases with boolean values. Enabling an omitted control uses its defaults. The separate `fullscreen`, `mobileCooperativeGestures`, and `rememberLastPosition` props remain supported as compatibility aliases. Precedence for each setting is explicit `runtimeOptions` value, explicit compatibility prop, JSON value, then default; `false` and `0` are explicit overrides.
+
+`runtimeOptions.rememberLastPosition` and its compatibility prop accept `false | 0 | true | 1 | "page" | "domain"`.
 - `false` / `0`: disabled, never load saved pan/zoom even if one exists
 - `true` / `1` / `"page"`: remember pan/zoom per host + path
 - `"domain"`: remember pan/zoom per host across paths
