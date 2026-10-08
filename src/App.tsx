@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapVibeMap, type AppConfig, type MapVibeRuntimeOptions } from './lib';
-import { normalizeRememberLastPosition } from './lib/rememberLastPosition';
-import { normalizeOptionalBooleanString } from './lib/stringBoolean';
+import { normalizeRememberLastPosition } from './lib/map/rememberLastPosition';
+import { normalizeOptionalBooleanString } from './lib/utils/stringBoolean';
 
 const MOBILE_COOPERATIVE_GESTURES_PARAM = 'mgc';
 const REMEMBER_LAST_POSITION_PARAM = 'rlp';

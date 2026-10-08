@@ -1,4 +1,4 @@
-import { isFalseString, isTrueString } from './stringBoolean';
+import { isFalseString, isTrueString } from '../utils/stringBoolean';
 
 export type RememberLastPositionValue = false | 0 | true | 1 | "page" | "domain";
 export type RememberLastPositionScope = false | "page" | "domain";

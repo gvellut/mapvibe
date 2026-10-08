@@ -16,7 +16,7 @@ For code changes, run `npm run lint` and `npm run fmt:check`. Apply `npm run lin
 
 ### Lib (React component)
 
-There is a a lib with an importable React component :
+The library's public entry point re-exports the importable React component and public types:
 
 `src/lib/index.tsx`
 
@@ -78,4 +78,4 @@ When finishing the work, update this AGENTS.md with consideration for future wor
 - `customUi.dataLayers[].clusterInteractive` is an opt-in flag for clustered interactive GeoJSON layers. When `true`, generated cluster features zoom to their expansion zoom and do not open the info panel; leaf features in the same data layer keep the existing `openUrl` or info-panel behavior.
 - Keep URL parsing in the standalone app and pass all host-provided overrides through `runtimeOptions`.
 - The custom fullscreen button opens a new tab with `mgc=no` and `fs=no`, so the fullscreen view disables cooperative gestures and hides the fullscreen button itself.
-- Shared boolean-string parsing lives in `src/lib/stringBoolean.ts`; reuse `isFalseString`, `isTrueString`, or `normalizeOptionalBooleanString` instead of duplicating accepted string lists.
+- Shared boolean-string parsing lives in `src/lib/utils/stringBoolean.ts`; reuse `isFalseString`, `isTrueString`, or `normalizeOptionalBooleanString` instead of duplicating accepted string lists.

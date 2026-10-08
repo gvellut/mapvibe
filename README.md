@@ -242,6 +242,8 @@ function App({ config }: { config: AppConfig }) {
 
 `MapVibeMap` is the embeddable component for host applications. If you want the standalone app that reads a `config` URL parameter, use the built website output described earlier in this README.
 
+The library's public entry point is `src/lib/index.tsx`, which imports the stylesheet and re-exports the component and public types. Internal modules are grouped by responsibility: `components` contains React rendering and lifecycle components, `map` contains MapLibre behavior, `styles` contains map-style processing and visual assets, and `utils` contains shared browser and parsing helpers. Component orchestration lives in `src/lib/components/MapVibeMap.tsx`. Application code should continue importing from `mapvibe`.
+
 Use `runtimeOptions` for host-provided overrides:
 
 ```tsx

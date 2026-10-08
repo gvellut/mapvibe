@@ -8,7 +8,7 @@ import {
     type Map
 } from 'maplibre-gl';
 import { resolveGeolocateOptions, type ResolvedControl } from './controlConfig';
-import { isMobile } from './deviceDetection';
+import { isMobile } from '../utils/deviceDetection';
 
 export class OpenInNewTabControl implements IControl {
     private container: HTMLDivElement | undefined;

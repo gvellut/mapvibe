@@ -4,9 +4,9 @@ import {
     resolveGeolocateOptions,
     resolveMapOptions,
     type MapVibeGeolocateControlOptions
-} from '../src/lib/controlConfig.ts';
-import { applyInteractions } from '../src/lib/interactions.ts';
-import { isMobile } from '../src/lib/deviceDetection.ts';
+} from '../src/lib/map/controlConfig.ts';
+import { applyInteractions } from '../src/lib/map/interactions.ts';
+import { isMobile } from '../src/lib/utils/deviceDetection.ts';
 
 test('missing controls enable the existing five with their previous defaults', () => {
     const options = resolveMapOptions();

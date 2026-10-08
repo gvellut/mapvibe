@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isMobile } from '../src/lib/deviceDetection.ts';
+import { isMobile } from '../src/lib/utils/deviceDetection.ts';
 
 const devices = [
     {
