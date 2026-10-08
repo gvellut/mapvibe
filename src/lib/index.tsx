@@ -149,13 +149,8 @@ export interface MapVibeMapHandle {
 export interface MapVibeMapProps {
     config: AppConfig;
     customProtocols?: Array<{ name: string; loadFn: AddProtocolAction }>;
+    /** Host-provided overrides take precedence over JSON settings and defaults. */
     runtimeOptions?: MapVibeRuntimeOptions;
-    /** Compatibility alias; prefer runtimeOptions.mobileCooperativeGestures. */
-    mobileCooperativeGestures?: boolean;
-    /** Compatibility alias; prefer runtimeOptions.rememberLastPosition. */
-    rememberLastPosition?: RememberLastPositionValue;
-    /** Compatibility alias; prefer runtimeOptions.controls.fullscreen. */
-    fullscreen?: boolean | null;
     ref?: React.Ref<MapVibeMapHandle>;
 }
 
@@ -318,23 +313,9 @@ const MapCanvas = ({
 MapCanvas.displayName = 'MapCanvas';
 
 // --- REACT COMPONENTS ---
-export const MapVibeMap = ({
-    config,
-    customProtocols,
-    runtimeOptions,
-    mobileCooperativeGestures,
-    rememberLastPosition,
-    fullscreen,
-    ref
-}: MapVibeMapProps) => {
+export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: MapVibeMapProps) => {
     // Map options are resolved once, matching the map's initialization-based lifecycle.
-    const [resolvedOptions] = useState(() =>
-        resolveMapOptions(config.customUi, runtimeOptions, {
-            mobileCooperativeGestures,
-            rememberLastPosition,
-            fullscreen
-        })
-    );
+    const [resolvedOptions] = useState(() => resolveMapOptions(config.customUi, runtimeOptions));
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
     const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);

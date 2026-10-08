@@ -76,6 +76,6 @@ When finishing the work, update this AGENTS.md with consideration for future wor
 - `InfoPanelData` now supports an optional `imageBackgroundColor` string copied from interactive feature properties, alongside `imageUrl`, `imageSize`, and `imagePadding`.
 - The info panel applies `imageBackgroundColor` to the outer image wrapper div, so GeoJSON feature properties can control the fill behind contained images.
 - `customUi.dataLayers[].clusterInteractive` is an opt-in flag for clustered interactive GeoJSON layers. When `true`, generated cluster features zoom to their expansion zoom and do not open the info panel; leaf features in the same data layer keep the existing `openUrl` or info-panel behavior.
-- Keep URL parsing in the standalone app and pass overrides through `runtimeOptions`; retain the separate runtime props for existing consumers, including `webcams_maps`.
+- Keep URL parsing in the standalone app and pass all host-provided overrides through `runtimeOptions`.
 - The custom fullscreen button opens a new tab with `mgc=no` and `fs=no`, so the fullscreen view disables cooperative gestures and hides the fullscreen button itself.
 - Shared boolean-string parsing lives in `src/lib/stringBoolean.ts`; reuse `isFalseString`, `isTrueString`, or `normalizeOptionalBooleanString` instead of duplicating accepted string lists.

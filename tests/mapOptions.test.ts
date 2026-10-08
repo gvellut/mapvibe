@@ -148,16 +148,15 @@ test('malformed entries are skipped and invalid positions fall back without stop
     assert.equal(options.controls[1].name, 'AttributionControl');
 });
 
-test('runtime control visibility beats compatibility props and keeps JSON options', () => {
+test('runtime control visibility overrides JSON visibility and keeps JSON options', () => {
     const result = resolveMapOptions(
         {
             controls: {
-                OpenInNewTab: { position: 'bottom-left' },
+                OpenInNewTab: { visible: false, position: 'bottom-left' },
                 Scale: { options: { unit: 'imperial' } }
             }
         },
-        { controls: { fullscreen: true, scale: false } },
-        { fullscreen: false }
+        { controls: { fullscreen: true, scale: false } }
     );
     assert.equal(result.controls[0].visible, true);
     assert.equal(result.controls[0].position, 'bottom-left');
@@ -202,29 +201,23 @@ test('unknown runtime controls are ignored and duplicate runtime aliases use the
     assert.equal(warning.mock.callCount(), 2);
 });
 
-test('runtime settings preserve explicit false and zero through every precedence level', () => {
+test('runtime settings preserve explicit false and zero over JSON settings', () => {
     const config = {
         interaction: { mobileCooperativeGestures: true },
         rememberLastPosition: 'domain' as const
     };
-    const legacy = { mobileCooperativeGestures: true, rememberLastPosition: 'page' as const };
     const result = resolveMapOptions(
         config,
-        { mobileCooperativeGestures: false, rememberLastPosition: 0 },
-        legacy
+        { mobileCooperativeGestures: false, rememberLastPosition: 0 }
     );
     assert.equal(result.interaction.mobileCooperativeGestures, false);
     assert.equal(result.rememberLastPosition, 0);
     assert.equal(
-        resolveMapOptions(
-            config,
-            {},
-            { mobileCooperativeGestures: false, rememberLastPosition: false }
-        ).rememberLastPosition,
+        resolveMapOptions(config, { mobileCooperativeGestures: false, rememberLastPosition: false })
+            .rememberLastPosition,
         false
     );
     assert.equal(resolveMapOptions(config).rememberLastPosition, 'domain');
-    assert.equal(resolveMapOptions(config, {}, legacy).rememberLastPosition, 'page');
     assert.equal(
         resolveMapOptions({ interaction: { mobileCooperativeGestures: false } }).interaction
             .mobileCooperativeGestures,
@@ -232,9 +225,18 @@ test('runtime settings preserve explicit false and zero through every precedence
     );
 });
 
-test('null fullscreen compatibility values defer to JSON', () => {
-    const result = resolveMapOptions({ controls: { fullscreen: true } }, {}, { fullscreen: null });
-    assert.equal(result.controls[0].visible, true);
+test('omitted runtime settings preserve JSON false and zero', () => {
+    const result = resolveMapOptions(
+        {
+            controls: { fullscreen: false },
+            interaction: { mobileCooperativeGestures: false },
+            rememberLastPosition: 0
+        },
+        {}
+    );
+    assert.equal(result.controls[0].visible, false);
+    assert.equal(result.interaction.mobileCooperativeGestures, false);
+    assert.equal(result.rememberLastPosition, 0);
 });
 
 test('interaction fields independently inherit the existing defaults', () => {

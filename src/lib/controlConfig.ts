@@ -93,12 +93,6 @@ export interface MapVibeRuntimeOptions {
     rememberLastPosition?: RememberLastPositionValue;
 }
 
-export interface LegacyRuntimeOptions {
-    fullscreen?: boolean | null;
-    mobileCooperativeGestures?: boolean;
-    rememberLastPosition?: RememberLastPositionValue;
-}
-
 export type ResolvedControl = {
     [Name in ControlName]: {
         name: Name;
@@ -239,14 +233,10 @@ export function resolveMapOptions(
         interaction?: InteractionConfig;
         rememberLastPosition?: RememberLastPositionValue;
     } = {},
-    runtimeOptions: MapVibeRuntimeOptions = {},
-    legacyOptions: LegacyRuntimeOptions = {}
+    runtimeOptions: MapVibeRuntimeOptions = {}
 ): ResolvedMapOptions {
     const controls = resolveControls(config.controls);
-    // Apply the compatibility prop first, so the new runtime structure has precedence.
-    if (legacyOptions.fullscreen != null) {
-        applyVisibilityOverrides(controls, { fullscreen: legacyOptions.fullscreen });
-    }
+    // Apply host-provided visibility overrides after resolving JSON settings.
     applyVisibilityOverrides(controls, runtimeOptions.controls);
 
     const interaction = { ...DEFAULT_INTERACTION };
@@ -256,17 +246,12 @@ export function resolveMapOptions(
         }
     }
     interaction.mobileCooperativeGestures =
-        runtimeOptions.mobileCooperativeGestures ??
-        legacyOptions.mobileCooperativeGestures ??
-        interaction.mobileCooperativeGestures;
+        runtimeOptions.mobileCooperativeGestures ?? interaction.mobileCooperativeGestures;
 
     return {
         controls,
         interaction,
         rememberLastPosition:
-            runtimeOptions.rememberLastPosition ??
-            legacyOptions.rememberLastPosition ??
-            config.rememberLastPosition ??
-            false
+            runtimeOptions.rememberLastPosition ?? config.rememberLastPosition ?? false
     };
 }

@@ -251,9 +251,9 @@ Use `runtimeOptions` for host-provided overrides:
 />
 ```
 
-`runtimeOptions.controls` accepts the registered control names and aliases with boolean values. Enabling an omitted control uses its defaults. The separate `fullscreen`, `mobileCooperativeGestures`, and `rememberLastPosition` props remain supported as compatibility aliases. Precedence for each setting is explicit `runtimeOptions` value, explicit compatibility prop, JSON value, then default; `false` and `0` are explicit overrides.
+`runtimeOptions.controls` accepts the registered control names and aliases with boolean values. Enabling an omitted control uses its defaults. Host-provided overrides must be passed through `runtimeOptions`; the separate `fullscreen`, `mobileCooperativeGestures`, and `rememberLastPosition` props are no longer supported. Precedence for each setting is explicit `runtimeOptions` value, JSON value, then default; `false` and `0` are explicit overrides.
 
-`runtimeOptions.rememberLastPosition` and its compatibility prop accept `false | 0 | true | 1 | "page" | "domain"`.
+`runtimeOptions.rememberLastPosition` accepts `false | 0 | true | 1 | "page" | "domain"`.
 - `false` / `0`: disabled, never load saved pan/zoom even if one exists
 - `true` / `1` / `"page"`: remember pan/zoom per host + path
 - `"domain"`: remember pan/zoom per host across paths
