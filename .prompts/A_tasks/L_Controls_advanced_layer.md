@@ -1,9 +1,3 @@
-- Add GeolocateControl for GPS : uses default maplibre GPS control : 
-    - for trackUserLocation option : can be true false or auto : auto (default) depends on mobile or desktop  : depends on current device
-    - mobile => follows the current position trackUserLocation = true
-    - desktop => trackUserLocation = false
-- add iPad detection in the isMobile
-
 - add an Advanced Layer chooser. It will have the same icon on the map as the current layer chooser. However when opening it will have some sizing suitable for mobile or desktop like the layer chooser in https://cartes.gouv.fr/explorer-les-cartes/ and https://github.com/IGNF/cartes.gouv.fr . The layer definition in the config JSON may have additional data for whatever is needed for that UI : add those parts to the backgrondLayers or dataLayers in customUi that references the layer + add additional data. if needs an icon and none defined for the layer : add a default one (that does not look like it says "error").
     - make the advanded layer chooser configurable : layers draggable (by default : not ie the layers canno change position), layers deletable (by default : not ie the layers cannot be deleted)
     - the order of display is the same as for the current layer chooser (first : background layers, exclusive, then data layers on top, can have multiple)

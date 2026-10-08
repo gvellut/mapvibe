@@ -1,0 +1,5 @@
+- customize GeolocateControl :
+    - for trackUserLocation option : can be true false but add auto : auto (default) depends on mobile or desktop  : depends on current device
+    - mobile => follows the current position trackUserLocation = true (maplibre will use toggle button)
+    - desktop => trackUserLocation = false (maplibre will use simple button)
+- add iPad detection in the isMobile
