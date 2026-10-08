@@ -7,7 +7,8 @@ import {
     type IControl,
     type Map
 } from 'maplibre-gl';
-import type { ResolvedControl } from './controlConfig';
+import { resolveGeolocateOptions, type ResolvedControl } from './controlConfig';
+import { isMobile } from './deviceDetection';
 
 export class OpenInNewTabControl implements IControl {
     private container: HTMLDivElement | undefined;
@@ -94,7 +95,8 @@ export function installControls(
                 control = new AttributionControl(config.options);
                 break;
             case 'GeolocateControl':
-                control = new GeolocateControl(config.options);
+                // Select tracking mode without activating geolocation.
+                control = new GeolocateControl(resolveGeolocateOptions(config.options, isMobile()));
                 break;
             case 'LayerChooserControl':
                 control = new LayerChooserControl(config.position, onLayerChooserHostChange);

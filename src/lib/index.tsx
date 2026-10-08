@@ -23,6 +23,7 @@ import {
 } from './controlConfig';
 import { installControls } from './controls';
 import { applyInteractions } from './interactions';
+import { isMobile } from './deviceDetection';
 
 export type {
     ControlAlias,
@@ -31,6 +32,7 @@ export type {
     ControlsConfig,
     ControlVisibilityOverrides,
     InteractionConfig,
+    MapVibeGeolocateControlOptions,
     MapVibeRuntimeOptions
 } from './controlConfig';
 export type { RememberLastPositionValue, RememberLastPositionScope } from './rememberLastPosition';
@@ -2063,10 +2065,4 @@ function getClampedZoomBounds(sourceDef: any, chooserConfig: CustomUiConfig) {
         maxZoom = Math.min(maxZoom ?? chooserConfig.globalMaxZoom, chooserConfig.globalMaxZoom);
     }
     return { minZoom, maxZoom };
-}
-
-function isMobile(): boolean {
-    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const isLikelyMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
-    return hasTouch && isLikelyMobile;
 }

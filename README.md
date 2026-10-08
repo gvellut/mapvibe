@@ -42,7 +42,7 @@ Each `controls` entry accepts a boolean or `{ visible?, position?, options? }`. 
   "layerChooser": true,
   "fullscreen": true,
   "Attribution": { "position": "bottom-left", "options": { "compact": true } },
-  "Geolocate": { "visible": false, "options": { "trackUserLocation": true } }
+  "Geolocate": { "visible": false, "options": { "trackUserLocation": "auto" } }
 }
 ```
 
@@ -57,7 +57,11 @@ Names are case-sensitive. Accept the full name below, the same name without `Con
 | `AttributionControl` | `attribution` | `bottom-left` | `compact`, `customAttribution` (string or array) ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/AttributionControlOptions/)) |
 | `GeolocateControl` | `geolocate` | `top-left` | `positionOptions`, `fitBoundsOptions`, `trackUserLocation`, `showUserLocation`, `showAccuracyCircle` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/GeolocateControlOptions/)) |
 
-When `controls` is absent, the existing five controls are enabled with their positions above, zoom buttons without a compass, metric scale, and expanded attribution. Geolocation is disabled. An explicit object enables only its listed entries; `{}` enables none. Options inherit those defaults, then pass directly to MapLibre. Geolocation requires browser support, a secure context (HTTPS or localhost), and permission; an iframe host may also need `allow="geolocation"`. It requests location when its button is used.
+When `controls` is absent, the existing five controls are enabled with their positions above, zoom buttons without a compass, metric scale, and expanded attribution. Geolocation is disabled. An explicit object enables only its listed entries; `{}` enables none. Options inherit those defaults, then pass to MapLibre after resolving Mapvibe-specific options.
+
+Geolocation's `trackUserLocation` accepts `true`, `false`, or `"auto"` (the default when omitted). `"auto"` resolves to `true` on detected mobile devices, including iPads, and `false` on desktop. `true` uses MapLibre's tracking toggle; `false` uses its simple location button. Explicit booleans override device detection. The mode is selected when the control is installed and does not change afterward. TypeScript consumers can use the exported `MapVibeGeolocateControlOptions` type.
+
+Geolocation requires browser support, a secure context (HTTPS or localhost), and permission; an iframe host may also need `allow="geolocation"`. It requests location when its button is used. `"auto"` only selects tracking mode and does not request location or activate tracking on map load.
 
 The following `interaction` defaults preserve current behavior. Missing fields inherit these values:
 
@@ -70,7 +74,7 @@ The following `interaction` defaults preserve current behavior. Missing fields i
 }
 ```
 
-`dragRotate` enables mouse rotation and pitch. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
+`dragRotate` enables mouse rotation and pitch. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices, including iPads using either mobile or desktop browser mode. Detection requires touch support plus a mobile user agent, or a `MacIntel` platform with more than one touch point for iPadOS desktop mode. Windows touchscreen desktops retain desktop behavior. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
 
 [Sample 6](samples/sample6/config.json) demonstrates the richer format; samples 1–5 retain legacy boolean controls.
 

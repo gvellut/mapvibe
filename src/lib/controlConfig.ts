@@ -7,13 +7,17 @@ import type {
 } from 'maplibre-gl';
 import type { RememberLastPositionValue } from './rememberLastPosition';
 
+export type MapVibeGeolocateControlOptions = Omit<GeolocateControlOptions, 'trackUserLocation'> & {
+    trackUserLocation?: boolean | 'auto';
+};
+
 interface ControlOptionsByName {
     NavigationControl: NavigationControlOptions;
     ScaleControl: ScaleControlOptions;
     LayerChooserControl: Record<string, never>;
     OpenInNewTabControl: Record<string, never>;
     AttributionControl: AttributionControlOptions;
-    GeolocateControl: GeolocateControlOptions;
+    GeolocateControl: MapVibeGeolocateControlOptions;
 }
 
 // Register supported controls explicitly; configuration never selects arbitrary constructors.
@@ -51,7 +55,7 @@ export const CONTROL_REGISTRY = {
     GeolocateControl: {
         aliases: ['Geolocate', 'geolocate'],
         position: 'top-left',
-        options: {},
+        options: { trackUserLocation: 'auto' },
         visible: false
     }
 } as const satisfies {
@@ -253,5 +257,17 @@ export function resolveMapOptions(
         interaction,
         rememberLastPosition:
             runtimeOptions.rememberLastPosition ?? config.rememberLastPosition ?? false
+    };
+}
+
+export function resolveGeolocateOptions(
+    options: MapVibeGeolocateControlOptions,
+    mobile: boolean
+): GeolocateControlOptions {
+    // MapLibre accepts only booleans; resolve the device-dependent default at installation.
+    return {
+        ...options,
+        trackUserLocation:
+            typeof options.trackUserLocation === 'boolean' ? options.trackUserLocation : mobile
     };
 }

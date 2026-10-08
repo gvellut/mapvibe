@@ -68,7 +68,7 @@ An example of project using this map control:
 
 ## AGENTS.md
 
-When finishing the work, update this AGENTS.md with consideration for future work. Add or remove (if no longer relevant) depending on the outcome of the work.
+When finishing the work, update this AGENTS.md with consideration for future work. Add or remove (if no longer relevant) depending on the outcome of the work. Keep notes focused on lasting instructions or constraints that cannot be found in the code or documentation; do not duplicate implementation details.
 
 ## Recent Notes
 

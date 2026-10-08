@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveMapOptions } from '../src/lib/controlConfig.ts';
+import {
+    resolveGeolocateOptions,
+    resolveMapOptions,
+    type MapVibeGeolocateControlOptions
+} from '../src/lib/controlConfig.ts';
 import { applyInteractions } from '../src/lib/interactions.ts';
+import { isMobile } from '../src/lib/deviceDetection.ts';
 
 test('missing controls enable the existing five with their previous defaults', () => {
     const options = resolveMapOptions();
@@ -29,7 +34,73 @@ test('missing controls enable the existing five with their previous defaults', (
     assert.deepEqual(options.controls[0].options, { showCompass: false });
     assert.deepEqual(options.controls[1].options, { unit: 'metric' });
     assert.deepEqual(options.controls[4].options, { compact: false });
+    assert.deepEqual(options.controls[5].options, { trackUserLocation: 'auto' });
     assert.equal(options.rememberLastPosition, false);
+});
+
+test('geolocation defaults to auto for boolean and object control entries', () => {
+    for (const Geolocate of [true, {}, { options: { fitBoundsOptions: { maxZoom: 13 } } }]) {
+        const control = resolveMapOptions({ controls: { Geolocate } }).controls[0];
+        assert.ok(control.name === 'GeolocateControl');
+        assert.equal(control.visible, true);
+        assert.equal(control.options.trackUserLocation, 'auto');
+    }
+});
+
+test('auto and omitted tracking modes follow the device; explicit booleans override it', () => {
+    const options: MapVibeGeolocateControlOptions[] = [
+        {},
+        { trackUserLocation: undefined },
+        { trackUserLocation: 'auto' },
+        { trackUserLocation: true },
+        { trackUserLocation: false }
+    ];
+    for (const mobile of [false, true]) {
+        assert.deepEqual(
+            options.map((option) => resolveGeolocateOptions(option, mobile).trackUserLocation),
+            [mobile, mobile, mobile, true, false]
+        );
+    }
+});
+
+test('resolving geolocation preserves other options and does not mutate configuration', () => {
+    const options: MapVibeGeolocateControlOptions = {
+        trackUserLocation: 'auto',
+        positionOptions: { enableHighAccuracy: true, timeout: 10000 },
+        fitBoundsOptions: { maxZoom: 13, padding: 20 },
+        showUserLocation: false,
+        showAccuracyCircle: false
+    };
+    const original = structuredClone(options);
+    Object.freeze(options);
+    for (const mobile of [false, true]) {
+        assert.deepEqual(resolveGeolocateOptions(options, mobile), {
+            ...original,
+            trackUserLocation: mobile
+        });
+        assert.deepEqual(options, original);
+    }
+});
+
+test('runtime visibility overrides preserve every configured tracking mode', () => {
+    for (const trackUserLocation of [true, false, 'auto'] as const) {
+        const config = {
+            controls: {
+                Geolocate: {
+                    visible: false,
+                    position: 'bottom-right' as const,
+                    options: { trackUserLocation, fitBoundsOptions: { maxZoom: 13 } }
+                }
+            }
+        };
+        const original = structuredClone(config);
+        const control = resolveMapOptions(config, { controls: { geolocate: true } }).controls[0];
+        assert.equal(control.name, 'GeolocateControl');
+        assert.equal(control.visible, true);
+        assert.equal(control.position, 'bottom-right');
+        assert.deepEqual(control.options, original.controls.Geolocate.options);
+        assert.deepEqual(config, original);
+    }
 });
 
 test('empty and partial control objects are explicit lists', () => {
@@ -179,6 +250,7 @@ test('runtime overrides can enable omitted controls using their defaults', () =>
     );
     assert.deepEqual(result.controls[0].options, { showCompass: false });
     assert.equal(result.controls[1].position, 'top-left');
+    assert.deepEqual(result.controls[2].options, { trackUserLocation: 'auto' });
 });
 
 test('unknown runtime controls are ignored and duplicate runtime aliases use the first value', (t) => {
@@ -313,4 +385,26 @@ test('cooperative gestures stay disabled on desktop and respect a mobile runtime
         true
     );
     assert.equal(mobile.calls.at(-1), 'cooperativeGestures.disable');
+});
+
+test('iPads share mobile geolocation and cooperative gesture behavior', () => {
+    for (const userAgent of [
+        'Mozilla/5.0 (iPad; CPU OS 12_0 like Mac OS X)',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)'
+    ]) {
+        const mobile = isMobile({ userAgent, platform: 'MacIntel', maxTouchPoints: 5 }, {});
+        assert.equal(
+            resolveGeolocateOptions({ trackUserLocation: 'auto' }, mobile).trackUserLocation,
+            true
+        );
+        const map = mockInteractionMap();
+        applyInteractions(map.map, resolveMapOptions().interaction, mobile);
+        assert.equal(map.calls.at(-1), 'cooperativeGestures.enable');
+        applyInteractions(
+            map.map,
+            resolveMapOptions({ interaction: { mobileCooperativeGestures: false } }).interaction,
+            mobile
+        );
+        assert.equal(map.calls.at(-1), 'cooperativeGestures.disable');
+    }
 });
