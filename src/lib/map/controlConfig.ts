@@ -15,7 +15,7 @@ interface ControlOptionsByName {
     NavigationControl: NavigationControlOptions;
     ScaleControl: ScaleControlOptions;
     LayerChooserControl: Record<string, never>;
-    OpenInNewTabControl: Record<string, never>;
+    FullscreenControl: Record<string, never>;
     AttributionControl: AttributionControlOptions;
     GeolocateControl: MapVibeGeolocateControlOptions;
 }
@@ -40,8 +40,8 @@ export const CONTROL_REGISTRY = {
         options: {},
         visible: true
     },
-    OpenInNewTabControl: {
-        aliases: ['OpenInNewTab', 'fullscreen'],
+    FullscreenControl: {
+        aliases: ['Fullscreen', 'fullscreen'],
         position: 'top-left',
         options: {},
         visible: true

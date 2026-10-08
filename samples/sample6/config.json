@@ -45,7 +45,7 @@
             },
             "Scale": { "options": { "unit": "nautical", "maxWidth": 120 } },
             "LayerChooser": { "position": "top-right" },
-            "OpenInNewTab": { "position": "top-left" },
+            "Fullscreen": { "position": "top-left" },
             "Attribution": {
                 "options": { "compact": true, "customAttribution": "Mapvibe controls sample" }
             },

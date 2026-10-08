@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type * as maplibregl from 'maplibre-gl';
 import {
@@ -41,10 +41,7 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
     const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);
-    backgroundCatalogRef.current = backgroundCatalog;
-
     const configRef = useRef(config);
-    configRef.current = config;
 
     const mapRef = useRef<MapInstanceHandle>(null);
     const backgroundRuntimeRef = useRef<BackgroundRuntimeState>(createBackgroundRuntimeState());
@@ -61,6 +58,14 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
         new Set(backgroundCatalog.initialVisibleDataLayerIds)
     );
     const visibleDataLayersRef = useRef(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+    const [previousBackgroundCatalog, setPreviousBackgroundCatalog] = useState(backgroundCatalog);
+
+    // Reset chooser state before committing a render with a new configuration.
+    if (previousBackgroundCatalog !== backgroundCatalog) {
+        setPreviousBackgroundCatalog(backgroundCatalog);
+        setSelectedBackgroundLayer(backgroundCatalog.initialSelection);
+        setVisibleDataLayers(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+    }
 
     const rememberLastPositionScope = normalizeRememberLastPosition(
         resolvedOptions.rememberLastPosition
@@ -80,20 +85,22 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
             ? { bounds: config.bounds }
             : {};
 
-    useEffect(() => {
+    // Map callbacks read the latest committed configuration and selection.
+    useLayoutEffect(() => {
+        backgroundCatalogRef.current = backgroundCatalog;
+        configRef.current = config;
+    }, [backgroundCatalog, config]);
+
+    useLayoutEffect(() => {
         selectedBackgroundLayerRef.current = selectedBackgroundLayer;
     }, [selectedBackgroundLayer]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         visibleDataLayersRef.current = visibleDataLayers;
     }, [visibleDataLayers]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         backgroundRuntimeRef.current = createBackgroundRuntimeState();
-        selectedBackgroundLayerRef.current = backgroundCatalog.initialSelection;
-        visibleDataLayersRef.current = new Set(backgroundCatalog.initialVisibleDataLayerIds);
-        setSelectedBackgroundLayer(backgroundCatalog.initialSelection);
-        setVisibleDataLayers(new Set(backgroundCatalog.initialVisibleDataLayerIds));
     }, [backgroundCatalog]);
 
     React.useImperativeHandle(
@@ -324,8 +331,10 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
     }, []);
 
     useEffect(() => {
+        // Retain this mounted map handle for cleanup even if the ref changes later.
+        const mapHandle = mapRef.current;
         return () => {
-            const map = mapRef.current?.getMap();
+            const map = mapHandle?.getMap();
             if (map) {
                 cleanupImportedBackgrounds(
                     map,

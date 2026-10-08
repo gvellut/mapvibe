@@ -10,7 +10,7 @@ import {
 import { resolveGeolocateOptions, type ResolvedControl } from './controlConfig';
 import { isMobile } from '../utils/deviceDetection';
 
-export class OpenInNewTabControl implements IControl {
+export class FullscreenControl implements IControl {
     private container: HTMLDivElement | undefined;
 
     onAdd(): HTMLElement {
@@ -101,8 +101,8 @@ export function installControls(
             case 'LayerChooserControl':
                 control = new LayerChooserControl(config.position, onLayerChooserHostChange);
                 break;
-            case 'OpenInNewTabControl':
-                control = new OpenInNewTabControl();
+            case 'FullscreenControl':
+                control = new FullscreenControl();
                 break;
         }
         map.addControl(control, config.position);

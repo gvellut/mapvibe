@@ -150,7 +150,7 @@ export function normalizeImportedStyle(
 
         nextLayerDefinition.id = nextLayerId;
         nextLayerDefinition.layout = {
-            ...(nextLayerDefinition.layout ?? {}),
+            ...nextLayerDefinition.layout,
             visibility: 'none'
         };
 

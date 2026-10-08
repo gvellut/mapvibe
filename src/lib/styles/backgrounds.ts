@@ -56,7 +56,7 @@ export function createInitialMapStyle(config: AppConfig): AppConfig {
             return {
                 ...layer,
                 layout: {
-                    ...(layer.layout ?? {}),
+                    ...layer.layout,
                     visibility: 'none'
                 }
             };

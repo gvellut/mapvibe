@@ -53,7 +53,7 @@ Names are case-sensitive. Accept the full name below, the same name without `Con
 | `NavigationControl` | `zoom` | `top-left` | `showZoom`, `showCompass`, `visualizePitch`, `visualizeRoll` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/NavigationControlOptions/)) |
 | `ScaleControl` | `scale` | `bottom-right` | `unit`: `metric`, `imperial`, or `nautical`; `maxWidth` in pixels ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/ScaleControlOptions/)) |
 | `LayerChooserControl` | `layerChooser` | `top-right` | None |
-| `OpenInNewTabControl` | `fullscreen` | `top-left` | None; opens the current URL in a new tab |
+| `FullscreenControl` | `fullscreen` | `top-left` | None; opens the current URL in a new tab |
 | `AttributionControl` | `attribution` | `bottom-left` | `compact`, `customAttribution` (string or array) ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/AttributionControlOptions/)) |
 | `GeolocateControl` | `geolocate` | `top-left` | `positionOptions`, `fitBoundsOptions`, `trackUserLocation`, `showUserLocation`, `showAccuracyCircle` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/GeolocateControlOptions/)) |
 

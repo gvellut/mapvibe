@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { AddProtocolAction, MissingStyleImageResolver } from 'maplibre-gl';
 import type { InteractionConfig } from '../map/controlConfig';
@@ -31,23 +31,11 @@ interface MapProps {
 }
 
 // Custom Map Component
-export const MapCanvas = ({
-    mapStyle,
-    initialViewState,
-    style,
-    attributionControl = true,
-    onLoad,
-    onClick,
-    onDrag,
-    onMoveEnd,
-    onDblClick,
-    resolveMissingStyleImage,
-    customProtocols,
-    interaction,
-    ref
-}: MapProps) => {
+export const MapCanvas = ({ style, ref, ...initializationProps }: MapProps) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<maplibregl.Map | null>(null);
+    // Map construction and event registration use the first render's options.
+    const [initialOptions] = useState(() => initializationProps);
 
     React.useImperativeHandle(ref, () => ({
         getMap: () => mapInstance.current
@@ -55,6 +43,20 @@ export const MapCanvas = ({
 
     useEffect(() => {
         if (!mapContainer.current) return;
+
+        const {
+            mapStyle,
+            initialViewState,
+            attributionControl = true,
+            onLoad,
+            onClick,
+            onDrag,
+            onMoveEnd,
+            onDblClick,
+            resolveMissingStyleImage,
+            customProtocols,
+            interaction
+        } = initialOptions;
 
         if (customProtocols) {
             customProtocols.forEach((protocol) => {
@@ -104,7 +106,7 @@ export const MapCanvas = ({
             map.remove();
             mapInstance.current = null;
         };
-    }, []);
+    }, [initialOptions]);
 
     return <div ref={mapContainer} style={style} />;
 };

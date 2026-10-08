@@ -16,7 +16,7 @@ test('missing controls enable the existing five with their previous defaults', (
             'NavigationControl',
             'ScaleControl',
             'LayerChooserControl',
-            'OpenInNewTabControl',
+            'FullscreenControl',
             'AttributionControl'
         ]
     );
@@ -26,7 +26,7 @@ test('missing controls enable the existing five with their previous defaults', (
             ['NavigationControl', 'top-left'],
             ['ScaleControl', 'bottom-right'],
             ['LayerChooserControl', 'top-right'],
-            ['OpenInNewTabControl', 'top-left'],
+            ['FullscreenControl', 'top-left'],
             ['AttributionControl', 'bottom-left'],
             ['GeolocateControl', 'top-left']
         ]
@@ -127,7 +127,7 @@ test('the existing five boolean keys remain supported', () => {
     });
     assert.equal(options.controls.length, 5);
     assert.equal(
-        options.controls.find((control) => control.name === 'OpenInNewTabControl')?.visible,
+        options.controls.find((control) => control.name === 'FullscreenControl')?.visible,
         false
     );
 });
@@ -138,7 +138,7 @@ test('full names and names without Control resolve to the same registered types'
             NavigationControl: {},
             ScaleControl: {},
             LayerChooserControl: {},
-            OpenInNewTabControl: {},
+            FullscreenControl: {},
             AttributionControl: {},
             GeolocateControl: {}
         }
@@ -148,7 +148,7 @@ test('full names and names without Control resolve to the same registered types'
             Navigation: {},
             Scale: {},
             LayerChooser: {},
-            OpenInNewTab: {},
+            Fullscreen: {},
             Attribution: {},
             Geolocate: {}
         }
@@ -223,7 +223,7 @@ test('runtime control visibility overrides JSON visibility and keeps JSON option
     const result = resolveMapOptions(
         {
             controls: {
-                OpenInNewTab: { visible: false, position: 'bottom-left' },
+                Fullscreen: { visible: false, position: 'bottom-left' },
                 Scale: { options: { unit: 'imperial' } }
             }
         },
@@ -244,7 +244,7 @@ test('runtime overrides can enable omitted controls using their defaults', () =>
         result.controls.map(({ name, visible }) => [name, visible]),
         [
             ['NavigationControl', true],
-            ['OpenInNewTabControl', true],
+            ['FullscreenControl', true],
             ['GeolocateControl', true]
         ]
     );
@@ -259,14 +259,14 @@ test('unknown runtime controls are ignored and duplicate runtime aliases use the
         controls: {
             Unknown: true,
             fullscreen: false,
-            OpenInNewTab: true,
+            Fullscreen: true,
             Geolocate: true
         }
     } as Parameters<typeof resolveMapOptions>[1]);
     assert.deepEqual(
         result.controls.map(({ name, visible }) => [name, visible]),
         [
-            ['OpenInNewTabControl', false],
+            ['FullscreenControl', false],
             ['GeolocateControl', true]
         ]
     );
