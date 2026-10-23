@@ -46,7 +46,7 @@ Each `controls` entry accepts a boolean or `{ visible?, position?, options? }`. 
 }
 ```
 
-Names are case-sensitive. Accept the full name below, the same name without `Control`, or the legacy alias. Supported controls are explicitly registered in Mapvibe; unknown names warn in the console and are skipped. Duplicate aliases for one type use the first entry.
+Names are case-sensitive. Accept the full name below, the same name without `Control`, or the legacy alias. Built-in controls are explicitly registered in Mapvibe. Host-supplied controls can be registered through `controlComponents` (see below); unknown unregistered names warn in the console and are skipped. Duplicate aliases for one type use the first entry.
 
 | Control | Legacy alias | Default position | `options` |
 | --- | --- | --- | --- |
@@ -265,6 +265,56 @@ Use `runtimeOptions` for host-provided overrides:
 - `"domain"`: remember pan/zoom per host across paths
 
 When a remembered position exists, it overrides `config.center`, `config.zoom`, `config.bounds`, and the automatic fit-to-sources fallback.
+
+### Host-supplied React controls
+
+Reference the component by name in JSON (or in the same `AppConfig` object passed by React):
+
+```json
+{
+  "customUi": {
+    "controls": {
+      "MyLayers": {
+        "position": "top-right",
+        "options": { "compact": true }
+      }
+    }
+  }
+}
+```
+
+Register the implementation in the caller; JSON never imports or executes code:
+
+```tsx
+import { MapVibeMap, type MapVibeControlProps } from 'mapvibe';
+
+function MyLayers({ options, layers }: MapVibeControlProps<{ compact?: boolean }>) {
+  return (
+    <div className={options.compact ? 'compact' : undefined}>
+      {layers.backgroundLayers.map((layer) => (
+        <button key={layer.id} onClick={() => layers.selectBackground(layer.id)}>
+          {layer.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const controlComponents = { MyLayers };
+// Pass the complete map style/customUi config, including the entry above.
+<MapVibeMap config={config} controlComponents={controlComponents} />;
+```
+
+`MapVibeControlProps<Options>` supplies `options`, the live MapLibre `map`, and a reactive `layers` controller. The registry type is `ControlComponents`; the controller type is `MapVibeLayerController`. The caller validates its component-specific options. Built-in names and aliases are reserved and cannot be replaced by a registry entry.
+
+- Custom controls accept the same boolean or `{ visible?, position?, options? }` shape and `runtimeOptions.controls` visibility overrides as built-ins. Their default corner is `top-right`.
+- Registry/configuration entries are resolved at mount, like built-in map options. Remount the map when replacing initialization settings or the registry.
+- Components render through React portals into MapLibre control containers, retaining caller React context. Hosts isolate map gestures and unmount their portal content when removed. Components must clean up their own subscriptions and document listeners.
+- `layers.backgroundLayers`, `layers.dataLayers`, `layers.selectedBackgroundLayer`, and `layers.visibleDataLayers` are the shared current state used by both host controls and the built-in chooser.
+- `selectBackground(id)` and `setDataLayerVisible(id, visible)` use Mapvibe's existing background, imported-style, and visibility behavior.
+- `moveLayer(group, id, toIndex)` reorders within `'background'` or `'data'`. Background moves change the chooser order. Data moves also change map stacking: the last data entry paints highest; each entry retains its member order and backgrounds remain below overlays.
+- `removeLayer(group, id)` removes a logical entry for the current session and hides its map content. Removing the selected background selects the first remaining one; the last background cannot be removed. Sources/styles stay allocated until the map is disposed. Remounting restores the configured entries and visibility.
+- Background and data entries support an optional `thumbnailUrl`. Mapvibe preserves this UI metadata; the host decides how to render thumbnails and fallbacks. The built-in chooser remains text-only.
 
 ### Accessing the MapLibre Instance
 

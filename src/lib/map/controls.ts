@@ -3,12 +3,12 @@ import {
     GeolocateControl,
     NavigationControl,
     ScaleControl,
-    type ControlPosition,
     type IControl,
     type Map
 } from 'maplibre-gl';
 import { resolveGeolocateOptions, type ResolvedControl } from './controlConfig';
 import { isMobile } from '../utils/deviceDetection';
+import { ReactControlHost } from './reactControlHost';
 
 export class FullscreenControl implements IControl {
     private container: HTMLDivElement | undefined;
@@ -38,40 +38,12 @@ export class FullscreenControl implements IControl {
     }
 }
 
-export class LayerChooserControl implements IControl {
-    private container: HTMLDivElement | undefined;
-    private position: ControlPosition;
-    private onHostChange: (host: HTMLElement | null) => void;
-
-    constructor(position: ControlPosition, onHostChange: (host: HTMLElement | null) => void) {
-        this.position = position;
-        this.onHostChange = onHostChange;
-    }
-
-    onAdd(): HTMLElement {
-        this.container = document.createElement('div');
-        this.container.className = 'maplibregl-ctrl maplibregl-ctrl-group custom-layer-chooser';
-        this.container.dataset.position = this.position;
-        // Keep chooser clicks, scrolling, and gestures from reaching map handlers.
-        for (const eventName of [
-            'mousedown',
-            'touchstart',
-            'pointerdown',
-            'click',
-            'dblclick',
-            'contextmenu',
-            'wheel'
-        ]) {
-            this.container.addEventListener(eventName, (event) => event.stopPropagation());
-        }
-        this.onHostChange(this.container);
-        return this.container;
-    }
-
-    onRemove(): void {
-        this.onHostChange(null);
-        this.container?.remove();
-        this.container = undefined;
+export class LayerChooserControl extends ReactControlHost {
+    constructor(
+        position: import('maplibre-gl').ControlPosition,
+        onHostChange: (host: HTMLElement | null) => void
+    ) {
+        super(position, onHostChange, 'custom-layer-chooser');
     }
 }
 

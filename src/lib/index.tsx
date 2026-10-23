@@ -10,7 +10,11 @@ export type {
     InfoPanelData,
     MapVibeImportInfo,
     MapVibeMapHandle,
-    MapVibeMapProps
+    MapVibeMapProps,
+    LayerGroup,
+    MapVibeLayerController,
+    MapVibeControlProps,
+    ControlComponents
 } from './types';
 export type {
     ControlAlias,

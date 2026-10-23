@@ -3,12 +3,12 @@ import type { BackgroundLayerConfig, DataLayerConfig } from '../types';
 
 // Layer Chooser Component, rendered inside its MapLibre control host.
 export const LayerChooser: React.FC<{
-    backgroundLayers: BackgroundLayerConfig[];
-    dataLayers: DataLayerConfig[];
+    backgroundLayers: readonly BackgroundLayerConfig[];
+    dataLayers: readonly DataLayerConfig[];
     visible: boolean;
     onToggle: () => void;
     selectedBackgroundLayer: string;
-    visibleDataLayers: Set<string>;
+    visibleDataLayers: ReadonlySet<string>;
     onBackgroundLayerChange: (layerId: string) => void;
     onDataLayerToggle: (layerId: string, visible: boolean) => void;
 }> = ({

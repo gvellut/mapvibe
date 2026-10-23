@@ -7,9 +7,16 @@ import {
     saveRememberedViewState
 } from '../map/rememberLastPosition';
 // URL overrides are parsed by App; the new-tab control sets mgc/fs in controls.ts.
-import { resolveMapOptions } from '../map/controlConfig';
+import { getControlName, resolveMapOptions } from '../map/controlConfig';
 import { installControls } from '../map/controls';
-import type { InfoPanelData, MapVibeMapProps } from '../types';
+import { ReactControlHost } from '../map/reactControlHost';
+import {
+    createLayerState,
+    reduceLayerState,
+    applyDataLayerOrder,
+    type LayerAction
+} from '../map/layerState';
+import type { InfoPanelData, MapVibeMapProps, MapVibeLayerController } from '../types';
 import { MapCanvas, type MapInstanceHandle } from './MapCanvas';
 import { LayerChooser } from './LayerChooser';
 import { InfoPanel, parseImageSize, parseImagePadding } from './InfoPanel';
@@ -21,7 +28,6 @@ import {
     getBackgroundLayerIds,
     applyBackgroundSelection,
     applyDataLayerVisibilitySelection,
-    setDataLayerVisibility,
     type BackgroundRuntimeState
 } from '../styles/backgrounds';
 import { loadBackgroundImport, cleanupImportedBackgrounds } from '../styles/styleImports';
@@ -35,9 +41,20 @@ import { fitMapToBounds, loadCustomImageOnDemand } from '../map/mapResources';
 const INFO_PANEL_DESKTOP_WIDTH = 450;
 
 // --- MAP ORCHESTRATION COMPONENT ---
-export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: MapVibeMapProps) => {
+export const MapVibeMap = ({
+    config,
+    customProtocols,
+    runtimeOptions,
+    controlComponents,
+    ref
+}: MapVibeMapProps) => {
     // Map options are resolved once, matching the map's initialization-based lifecycle.
-    const [resolvedOptions] = useState(() => resolveMapOptions(config.customUi, runtimeOptions));
+    const [registeredComponents] = useState(() => ({ ...controlComponents }));
+    const [resolvedOptions] = useState(() =>
+        resolveMapOptions(config.customUi, runtimeOptions, Object.keys(registeredComponents))
+    );
+    const [customHosts, setCustomHosts] = useState<Record<string, HTMLElement>>({});
+    const [loadedMap, setLoadedMap] = useState<maplibregl.Map | null>(null);
     const backgroundCatalog = useMemo(() => buildBackgroundCatalog(config), [config]);
     const initialMapStyle = useMemo(() => createInitialMapStyle(config), [config]);
     const backgroundCatalogRef = useRef(backgroundCatalog);
@@ -50,21 +67,17 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
     const [layerChooserHost, setLayerChooserHost] = useState<HTMLElement | null>(null);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
-    const [selectedBackgroundLayer, setSelectedBackgroundLayer] = useState(
-        backgroundCatalog.initialSelection
-    );
-    const selectedBackgroundLayerRef = useRef(backgroundCatalog.initialSelection);
-    const [visibleDataLayers, setVisibleDataLayers] = useState(
-        new Set(backgroundCatalog.initialVisibleDataLayerIds)
-    );
-    const visibleDataLayersRef = useRef(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+    const [layerState, setLayerState] = useState(() => createLayerState(backgroundCatalog));
+    const layerStateRef = useRef(layerState);
+    const { selectedBackgroundLayer, visibleDataLayers } = layerState;
+    const selectedBackgroundLayerRef = useRef(selectedBackgroundLayer);
+    const visibleDataLayersRef = useRef(visibleDataLayers);
     const [previousBackgroundCatalog, setPreviousBackgroundCatalog] = useState(backgroundCatalog);
 
     // Reset chooser state before committing a render with a new configuration.
     if (previousBackgroundCatalog !== backgroundCatalog) {
         setPreviousBackgroundCatalog(backgroundCatalog);
-        setSelectedBackgroundLayer(backgroundCatalog.initialSelection);
-        setVisibleDataLayers(new Set(backgroundCatalog.initialVisibleDataLayerIds));
+        setLayerState(createLayerState(backgroundCatalog));
     }
 
     const rememberLastPositionScope = normalizeRememberLastPosition(
@@ -92,8 +105,9 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
     }, [backgroundCatalog, config]);
 
     useLayoutEffect(() => {
-        selectedBackgroundLayerRef.current = selectedBackgroundLayer;
-    }, [selectedBackgroundLayer]);
+        layerStateRef.current = layerState;
+        selectedBackgroundLayerRef.current = layerState.selectedBackgroundLayer;
+    }, [layerState]);
 
     useLayoutEffect(() => {
         visibleDataLayersRef.current = visibleDataLayers;
@@ -119,30 +133,52 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
         []
     );
 
-    const applySelectedBackground = useCallback(
-        (backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => {
-            const map = mapRef.current?.getMap();
-            if (!map) return;
-
+    const changeLayers = useCallback((action: LayerAction) => {
+        const previous = layerStateRef.current;
+        const next = reduceLayerState(previous, action);
+        if (next === previous) return;
+        // Update refs immediately so consecutive actions and async imports see the same state.
+        layerStateRef.current = next;
+        selectedBackgroundLayerRef.current = next.selectedBackgroundLayer;
+        visibleDataLayersRef.current = next.visibleDataLayers;
+        setLayerState(next);
+        const map = mapRef.current?.getMap();
+        if (!map) return;
+        const catalog = backgroundCatalogRef.current;
+        if (next.selectedBackgroundLayer !== previous.selectedBackgroundLayer) {
             applyBackgroundSelection(
                 map,
-                backgroundId,
-                backgroundCatalogRef.current,
+                next.selectedBackgroundLayer,
+                catalog,
                 backgroundRuntimeRef.current,
                 configRef.current.customUi
             );
+        }
+        applyDataLayerVisibilitySelection(map, catalog, next.visibleDataLayers);
+        if (action.type === 'move' && action.group === 'data') {
+            applyDataLayerOrder(map, catalog, next.dataIds, backgroundRuntimeRef.current);
+        }
+    }, []);
 
-            selectedBackgroundLayerRef.current = backgroundId;
-
+    const applySelectedBackground = useCallback(
+        (backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => {
+            const map = mapRef.current?.getMap();
+            if (!map || !layerStateRef.current.backgroundIds.includes(backgroundId)) return;
             if (options?.updateState !== false) {
-                setSelectedBackgroundLayer(backgroundId);
+                changeLayers({ type: 'select', id: backgroundId });
+            } else {
+                // Imported members arrive asynchronously and must use the current selection.
+                applyBackgroundSelection(
+                    map,
+                    backgroundId,
+                    backgroundCatalogRef.current,
+                    backgroundRuntimeRef.current,
+                    configRef.current.customUi
+                );
             }
-
-            if (options?.closeChooser !== false) {
-                setLayerChooserVisible(false);
-            }
+            if (options?.closeChooser !== false) setLayerChooserVisible(false);
         },
-        []
+        [changeLayers]
     );
 
     const ensureConfiguredImportsLoaded = useCallback(() => {
@@ -183,7 +219,36 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
             visibleDataLayersRef.current
         );
 
-        installControls(map, resolvedOptions.controls, setLayerChooserHost);
+        // Keep built-in and host controls in the JSON's order within each corner.
+        // Runtime-enabled, omitted controls follow the explicitly configured entries.
+        const controlOrder = new Set([
+            ...Object.keys(currentConfig.customUi.controls ?? {}).map(
+                (name) => getControlName(name) ?? name
+            ),
+            ...resolvedOptions.controls.map((control) => control.name),
+            ...resolvedOptions.customControls.map((control) => control.name)
+        ]);
+        for (const name of controlOrder) {
+            const builtIn = resolvedOptions.controls.find((control) => control.name === name);
+            if (builtIn) {
+                installControls(map, [builtIn], setLayerChooserHost);
+                continue;
+            }
+            const control = resolvedOptions.customControls.find((control) => control.name === name);
+            if (!control?.visible) continue;
+            map.addControl(
+                new ReactControlHost(control.position, (host) => {
+                    setCustomHosts((previous) => {
+                        const next = { ...previous };
+                        if (host) next[control.name] = host;
+                        else delete next[control.name];
+                        return next;
+                    });
+                }),
+                control.position
+            );
+        }
+        setLoadedMap(map);
 
         map.on('mousemove', (e) => {
             const action = getInteractiveFeatureActionAtPoint(
@@ -207,6 +272,7 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
     }, [
         ensureConfiguredImportsLoaded,
         resolvedOptions.controls,
+        resolvedOptions.customControls,
         hasConfiguredBounds,
         hasConfiguredCenterZoom,
         hasRememberedViewState
@@ -311,24 +377,25 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
         [applySelectedBackground]
     );
 
-    const handleDataLayerToggle = useCallback((dataLayerId: string, visible: boolean) => {
-        const map = mapRef.current?.getMap();
-        const dataLayer = backgroundCatalogRef.current.dataLayerConfigs.get(dataLayerId);
-        if (!map || !dataLayer) return;
+    const handleDataLayerToggle = useCallback(
+        (id: string, visible: boolean) => {
+            changeLayers({ type: 'visibility', id, visible });
+        },
+        [changeLayers]
+    );
 
-        setVisibleDataLayers((previous) => {
-            const next = new Set(previous);
-            if (visible) {
-                next.add(dataLayerId);
-            } else {
-                next.delete(dataLayerId);
-            }
-            visibleDataLayersRef.current = next;
-            return next;
-        });
-
-        setDataLayerVisibility(map, dataLayer, visible);
-    }, []);
+    const layerController: MapVibeLayerController = {
+        backgroundLayers: layerState.backgroundIds.map((id) =>
+            backgroundCatalog.backgroundEntries.find((entry) => entry.id === id)!
+        ),
+        dataLayers: layerState.dataIds.map((id) => backgroundCatalog.dataLayerConfigs.get(id)!),
+        selectedBackgroundLayer,
+        visibleDataLayers,
+        selectBackground: (id) => changeLayers({ type: 'select', id }),
+        setDataLayerVisible: handleDataLayerToggle,
+        moveLayer: (group, id, toIndex) => changeLayers({ type: 'move', group, id, toIndex }),
+        removeLayer: (group, id) => changeLayers({ type: 'remove', group, id })
+    };
 
     useEffect(() => {
         // Retain this mounted map handle for cleanup even if the ref changes later.
@@ -369,8 +436,8 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
             {layerChooserHost &&
                 createPortal(
                     <LayerChooser
-                        backgroundLayers={backgroundCatalog.backgroundEntries}
-                        dataLayers={backgroundCatalog.dataLayerEntries}
+                        backgroundLayers={layerController.backgroundLayers}
+                        dataLayers={layerController.dataLayers}
                         visible={layerChooserVisible}
                         onToggle={() => {
                             setLayerChooserVisible(!layerChooserVisible);
@@ -383,6 +450,23 @@ export const MapVibeMap = ({ config, customProtocols, runtimeOptions, ref }: Map
                     />,
                     layerChooserHost
                 )}
+
+            {loadedMap &&
+                resolvedOptions.customControls.map((control) => {
+                    const host = customHosts[control.name];
+                    const Component = registeredComponents[control.name];
+                    return host && Component
+                        ? createPortal(
+                              <Component
+                                  options={control.options}
+                                  map={loadedMap}
+                                  layers={layerController}
+                              />,
+                              host,
+                              control.name
+                          )
+                        : null;
+                })}
 
             {infoPanelVisible && (
                 <InfoPanel

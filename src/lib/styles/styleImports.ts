@@ -206,6 +206,12 @@ export function cleanupImportedBackgrounds(
     runtime: BackgroundRuntimeState,
     catalog: BackgroundCatalog
 ) {
+    // React development remounts can dispose a map before its style has loaded.
+    // With no materialized imports there is no map style or glyph state to restore.
+    if (runtime.imports.size === 0) {
+        runtime.loadingImports.clear();
+        return;
+    }
     for (const importInfo of runtime.imports.values()) {
         for (const layerId of [...importInfo.layerIds].reverse()) {
             if (map.getLayer(layerId)) {

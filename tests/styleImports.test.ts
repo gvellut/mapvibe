@@ -8,7 +8,8 @@ import {
 } from '../src/lib/styles/styleImports.ts';
 import {
     buildBackgroundCatalog,
-    createBackgroundRuntimeState
+    createBackgroundRuntimeState,
+    type BackgroundCatalog
 } from '../src/lib/styles/backgrounds.ts';
 import {
     normalizeSpriteConfiguration,
@@ -216,4 +217,13 @@ test('imports load once, materialize below overlays, reapply selection and clean
         ['glyphs', catalog.topStyleGlyphsUrl]
     ]);
     assert.equal(runtime.imports.size, 0);
+});
+
+
+test('cleanup before style load does not access uninitialized map style during React remounts', () => {
+    const runtime = createBackgroundRuntimeState();
+    runtime.loadingImports.add('pending');
+    const map = { setGlyphs() { throw new Error('Style is not done loading.'); } } as unknown as Map;
+    cleanupImportedBackgrounds(map, runtime, { topStyleGlyphsUrl: undefined } as BackgroundCatalog);
+    assert.equal(runtime.loadingImports.size, 0);
 });

@@ -80,9 +80,16 @@ export type ControlsConfig = {
     [Name in ControlName as Name | (typeof CONTROL_REGISTRY)[Name]['aliases'][number]]?:
         | boolean
         | ControlConfig<ControlOptionsByName[Name]>;
-};
+} & Record<string, boolean | ControlConfig<object> | undefined>;
 
-export type ControlVisibilityOverrides = Partial<Record<ControlAlias, boolean>>;
+export type ControlVisibilityOverrides = Partial<Record<ControlAlias | (string & {}), boolean>>;
+
+export interface ResolvedCustomControl {
+    name: string;
+    visible: boolean;
+    position: ControlPosition;
+    options: Record<string, unknown>;
+}
 
 export interface InteractionConfig {
     dragRotate?: boolean;
@@ -108,6 +115,7 @@ export type ResolvedControl = {
 
 export interface ResolvedMapOptions {
     controls: ResolvedControl[];
+    customControls: ResolvedCustomControl[];
     interaction: Required<InteractionConfig>;
     rememberLastPosition: RememberLastPositionValue;
 }
@@ -125,7 +133,7 @@ const CONTROL_POSITIONS: readonly ControlPosition[] = [
     'bottom-right'
 ];
 
-function getControlName(name: string): ControlName | undefined {
+export function getControlName(name: string): ControlName | undefined {
     return (Object.keys(CONTROL_REGISTRY) as ControlName[]).find(
         (controlName) =>
             controlName === name ||
@@ -147,7 +155,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function resolveControls(config: ControlsConfig | undefined): ResolvedControl[] {
+function resolveControls(
+    config: ControlsConfig | undefined,
+    registeredNames: readonly string[]
+): ResolvedControl[] {
     if (config === undefined) {
         return (Object.keys(CONTROL_REGISTRY) as ControlName[]).map(defaultControl);
     }
@@ -161,6 +172,7 @@ function resolveControls(config: ControlsConfig | undefined): ResolvedControl[] 
     for (const [alias, value] of Object.entries(config)) {
         const name = getControlName(alias);
         if (!name) {
+            if (registeredNames.includes(alias)) continue;
             console.warn(`Ignoring unknown MapVibe control "${alias}".`);
             continue;
         }
@@ -203,13 +215,15 @@ function resolveControls(config: ControlsConfig | undefined): ResolvedControl[] 
 
 function applyVisibilityOverrides(
     controls: ResolvedControl[],
-    overrides: ControlVisibilityOverrides | undefined
+    overrides: ControlVisibilityOverrides | undefined,
+    registeredNames: readonly string[]
 ): void {
     if (!overrides) return;
     const seen = new Set<ControlName>();
     for (const [alias, visible] of Object.entries(overrides)) {
         const name = getControlName(alias);
         if (!name) {
+            if (registeredNames.includes(alias)) continue;
             console.warn(`Ignoring unknown MapVibe control override "${alias}".`);
             continue;
         }
@@ -231,17 +245,70 @@ function applyVisibilityOverrides(
     }
 }
 
+function resolveCustomControls(
+    config: ControlsConfig | undefined,
+    overrides: ControlVisibilityOverrides | undefined,
+    registeredNames: readonly string[]
+): ResolvedCustomControl[] {
+    const entries: ResolvedCustomControl[] = [];
+    const names = new Set([
+        ...Object.keys(isObject(config) ? config : {}),
+        ...Object.keys(overrides ?? {})
+    ]);
+    for (const name of names) {
+        if (!registeredNames.includes(name)) continue;
+        // Built-ins and their aliases always use Mapvibe's implementation.
+        if (getControlName(name)) continue;
+        const value = isObject(config) ? config[name] : undefined;
+        const override = overrides?.[name];
+        if (value === undefined && typeof override !== 'boolean') continue;
+        if (value !== undefined && typeof value !== 'boolean' && !isObject(value)) {
+            console.warn(`Ignoring invalid configuration for MapVibe control "${name}".`);
+            continue;
+        }
+        const entry: ResolvedCustomControl = {
+            name,
+            visible:
+                typeof override === 'boolean'
+                    ? override
+                    : typeof value === 'boolean'
+                      ? value
+                      : value?.visible !== false,
+            position: 'top-right',
+            options: {}
+        };
+        if (isObject(value)) {
+            if (value.position !== undefined) {
+                if (CONTROL_POSITIONS.includes(value.position as ControlPosition)) {
+                    entry.position = value.position as ControlPosition;
+                } else {
+                    console.warn(
+                        `Invalid position for MapVibe control "${name}"; using top-right.`
+                    );
+                }
+            }
+            if (value.options !== undefined) {
+                if (isObject(value.options)) entry.options = { ...value.options };
+                else console.warn(`Invalid options for MapVibe control "${name}"; using defaults.`);
+            }
+        }
+        entries.push(entry);
+    }
+    return entries;
+}
+
 export function resolveMapOptions(
     config: {
         controls?: ControlsConfig;
         interaction?: InteractionConfig;
         rememberLastPosition?: RememberLastPositionValue;
     } = {},
-    runtimeOptions: MapVibeRuntimeOptions = {}
+    runtimeOptions: MapVibeRuntimeOptions = {},
+    registeredNames: readonly string[] = []
 ): ResolvedMapOptions {
-    const controls = resolveControls(config.controls);
+    const controls = resolveControls(config.controls, registeredNames);
     // Apply host-provided visibility overrides after resolving JSON settings.
-    applyVisibilityOverrides(controls, runtimeOptions.controls);
+    applyVisibilityOverrides(controls, runtimeOptions.controls, registeredNames);
 
     const interaction = { ...DEFAULT_INTERACTION };
     for (const key of Object.keys(DEFAULT_INTERACTION) as (keyof InteractionConfig)[]) {
@@ -254,6 +321,11 @@ export function resolveMapOptions(
 
     return {
         controls,
+        customControls: resolveCustomControls(
+            config.controls,
+            runtimeOptions.controls,
+            registeredNames
+        ),
         interaction,
         rememberLastPosition:
             runtimeOptions.rememberLastPosition ?? config.rememberLastPosition ?? false

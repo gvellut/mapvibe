@@ -12,6 +12,8 @@ export interface BackgroundLayerConfig {
     name: string;
     layerIds: string[];
     visible?: boolean;
+    /** Optional UI image, interpreted by the host control. */
+    thumbnailUrl?: string;
 }
 
 export interface StyleImportConfig {
@@ -24,6 +26,8 @@ export interface DataLayerConfig {
     name: string;
     layerIds: string[];
     visible?: boolean;
+    /** Optional UI image, interpreted by the host control. */
+    thumbnailUrl?: string;
     interactive?: boolean;
     clusterInteractive?: boolean;
     openUrl?: boolean;
@@ -101,9 +105,34 @@ export interface MapVibeMapHandle {
     closeInfoPanel: () => void;
 }
 
+export type LayerGroup = 'background' | 'data';
+
+/** One shared, reactive layer model for built-in and host-provided controls. */
+export interface MapVibeLayerController {
+    backgroundLayers: readonly BackgroundLayerConfig[];
+    dataLayers: readonly DataLayerConfig[];
+    selectedBackgroundLayer: string;
+    visibleDataLayers: ReadonlySet<string>;
+    selectBackground: (id: string) => void;
+    setDataLayerVisible: (id: string, visible: boolean) => void;
+    moveLayer: (group: LayerGroup, id: string, toIndex: number) => void;
+    removeLayer: (group: LayerGroup, id: string) => void;
+}
+
+export interface MapVibeControlProps<Options = Record<string, unknown>> {
+    options: Options;
+    map: maplibregl.Map;
+    layers: MapVibeLayerController;
+}
+
+// Registries contain heterogeneous option types; each component owns its options contract.
+export type ControlComponents = Record<string, React.ComponentType<MapVibeControlProps<any>>>;
+
 export interface MapVibeMapProps {
     config: AppConfig;
     customProtocols?: Array<{ name: string; loadFn: AddProtocolAction }>;
+    /** Component names referenced by customUi.controls; built-in names are reserved. */
+    controlComponents?: ControlComponents;
     /** Host-provided overrides take precedence over JSON settings and defaults. */
     runtimeOptions?: MapVibeRuntimeOptions;
     ref?: React.Ref<MapVibeMapHandle>;
