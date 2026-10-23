@@ -1,0 +1,1 @@
+I would like to retain which layers are visible across web page reloads (so it never run : uses the "svisible" of the config.json, if already run, has saved the visiblity and reuses that). Can it be implemented in mapvibe ? similar to position memory.
