@@ -2,6 +2,7 @@
 - [Layer visiblity memory](M_tasks/N_Layer_visiblity_memory.md)
 - [Runtime controls simpllify only fullscreen](M_tasks/O_Runtime_controls_simpllify_only_fullscreen.md)
 - [coherent stacking order of layers](M_tasks/P_coherent_stacking_order_of_layers.md)
+- [tools groupable or standalone](M_tasks/Q_tools_groupable_or_standalone.md)
 ! [Add url click support](A_tasks/A_Add_url_click_support.md)
 ! [Padding for images](A_tasks/B_Padding_for_images.md)
 ! [Add imageSizeIsMax setting in config](A_tasks/C_Add_imageSizeIsMax_setting_in_config.md)

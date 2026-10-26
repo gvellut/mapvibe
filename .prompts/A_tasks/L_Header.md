@@ -1,0 +1,6 @@
+- Add control for a header Bar : it will be a bar added ad the top above the map : define logo (optional) + name
+    - will take some height and the whole width
+    - Make it small by default (a bit higher for desktop compared to mobile)
+    - logo then name aligned to the left by default
+    - default : white background + black text
+    - colors configurable + height + alignment but also in CSS
