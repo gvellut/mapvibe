@@ -1,5 +1,5 @@
+* [Layer visiblity memory](M_tasks/N_Layer_visiblity_memory.md)
 - [Header additional](A_tasks/L_Header.md)
-- [Layer visiblity memory](M_tasks/N_Layer_visiblity_memory.md)
 - [Runtime controls simpllify only fullscreen](M_tasks/O_Runtime_controls_simpllify_only_fullscreen.md)
 - [coherent stacking order of layers](M_tasks/P_coherent_stacking_order_of_layers.md)
 - [tools groupable or standalone](M_tasks/Q_tools_groupable_or_standalone.md)

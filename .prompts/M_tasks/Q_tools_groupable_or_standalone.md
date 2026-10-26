@@ -1,3 +1,4 @@
 - get height, lat lon
 - measurement
 - can have a groupable that expands on click (like current cartes gouv fr)
+- automatic appears if enough tools in the tool group
