@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { MapVibeMap, type AppConfig, type MapVibeRuntimeOptions } from './lib';
 import { normalizeRememberLastPosition } from './lib/map/rememberLastPosition';
+import { normalizeRememberLayerVisibility } from './lib/map/rememberLayerVisibility';
 import { normalizeOptionalBooleanString } from './lib/utils/stringBoolean';
 
 const MOBILE_COOPERATIVE_GESTURES_PARAM = 'mgc';
 const REMEMBER_LAST_POSITION_PARAM = 'rlp';
+const REMEMBER_LAYER_VISIBILITY_PARAM = 'rlv';
 const FULLSCREEN_PARAM = 'fs';
 
 const App: React.FC = () => {
@@ -18,6 +20,7 @@ const App: React.FC = () => {
             const configUrl = urlParams.get('config');
             const mobileCooperativeGesturesParam = urlParams.get(MOBILE_COOPERATIVE_GESTURES_PARAM);
             const rememberLastPositionParam = urlParams.get(REMEMBER_LAST_POSITION_PARAM);
+            const rememberLayerVisibilityParam = urlParams.get(REMEMBER_LAYER_VISIBILITY_PARAM);
             const fullscreenParam = urlParams.get(FULLSCREEN_PARAM);
 
             const options: MapVibeRuntimeOptions = {};
@@ -40,6 +43,17 @@ const App: React.FC = () => {
             ) {
                 options.rememberLastPosition =
                     normalizeRememberLastPosition(rememberLastPositionParam);
+            }
+            // Layer visibility accepts the same scoped and boolean overrides as position.
+            const visibilityScope = rememberLayerVisibilityParam?.trim().toLowerCase();
+            if (
+                normalizeOptionalBooleanString(rememberLayerVisibilityParam) !== null ||
+                visibilityScope === 'page' ||
+                visibilityScope === 'domain'
+            ) {
+                options.rememberLayerVisibility = normalizeRememberLayerVisibility(
+                    rememberLayerVisibilityParam
+                );
             }
             setRuntimeOptions(options);
 

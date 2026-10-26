@@ -6,6 +6,7 @@ import type {
     ScaleControlOptions
 } from 'maplibre-gl';
 import type { RememberLastPositionValue } from './rememberLastPosition';
+import type { RememberLayerVisibilityValue } from './rememberLayerVisibility';
 
 export type MapVibeGeolocateControlOptions = Omit<GeolocateControlOptions, 'trackUserLocation'> & {
     trackUserLocation?: boolean | 'auto';
@@ -102,6 +103,7 @@ export interface MapVibeRuntimeOptions {
     controls?: ControlVisibilityOverrides;
     mobileCooperativeGestures?: boolean;
     rememberLastPosition?: RememberLastPositionValue;
+    rememberLayerVisibility?: RememberLayerVisibilityValue;
 }
 
 export type ResolvedControl = {
@@ -118,6 +120,7 @@ export interface ResolvedMapOptions {
     customControls: ResolvedCustomControl[];
     interaction: Required<InteractionConfig>;
     rememberLastPosition: RememberLastPositionValue;
+    rememberLayerVisibility: RememberLayerVisibilityValue;
 }
 
 const DEFAULT_INTERACTION: Required<InteractionConfig> = {
@@ -302,6 +305,7 @@ export function resolveMapOptions(
         controls?: ControlsConfig;
         interaction?: InteractionConfig;
         rememberLastPosition?: RememberLastPositionValue;
+        rememberLayerVisibility?: RememberLayerVisibilityValue;
     } = {},
     runtimeOptions: MapVibeRuntimeOptions = {},
     registeredNames: readonly string[] = []
@@ -328,7 +332,9 @@ export function resolveMapOptions(
         ),
         interaction,
         rememberLastPosition:
-            runtimeOptions.rememberLastPosition ?? config.rememberLastPosition ?? false
+            runtimeOptions.rememberLastPosition ?? config.rememberLastPosition ?? false,
+        rememberLayerVisibility:
+            runtimeOptions.rememberLayerVisibility ?? config.rememberLayerVisibility ?? false
     };
 }
 

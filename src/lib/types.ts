@@ -3,6 +3,7 @@ import type * as maplibregl from 'maplibre-gl';
 import type { AddProtocolAction } from 'maplibre-gl';
 import type { ControlsConfig, InteractionConfig, MapVibeRuntimeOptions } from './map/controlConfig';
 import type { RememberLastPositionValue } from './map/rememberLastPosition';
+import type { RememberLayerVisibilityValue } from './map/rememberLayerVisibility';
 
 export type SpriteConfig = string | Array<{ id: string; url: string }> | undefined;
 
@@ -44,6 +45,7 @@ export interface CustomUiConfig {
     controls?: ControlsConfig;
     interaction?: InteractionConfig;
     rememberLastPosition?: RememberLastPositionValue;
+    rememberLayerVisibility?: RememberLayerVisibilityValue;
     imports?: StyleImportConfig[];
     backgroundLayers: BackgroundLayerConfig[];
     dataLayers: DataLayerConfig[];

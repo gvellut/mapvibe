@@ -14,6 +14,8 @@ After code changes, before returning to the user, run `npm run lint` and `npm ru
 
 For changes to the library integration API, validate an external caller as well as the standalone sample; standalone checks alone do not cover consumer bundling and React context.
 
+When validating persisted browser preferences, isolate test storage and preserve unrelated saved user preferences.
+
 ## Lib and app
 
 ### Lib (React component)

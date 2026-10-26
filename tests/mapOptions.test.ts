@@ -311,6 +311,18 @@ test('omitted runtime settings preserve JSON false and zero', () => {
     assert.equal(result.rememberLastPosition, 0);
 });
 
+test('remembered layer visibility is independent, disabled by default, and follows runtime precedence', () => {
+    assert.equal(resolveMapOptions().rememberLayerVisibility, false);
+    const config = { rememberLayerVisibility: 'domain' as const, rememberLastPosition: 'page' as const };
+    assert.equal(resolveMapOptions(config).rememberLayerVisibility, 'domain');
+    for (const value of [false, 0, true, 1, 'page', 'domain'] as const) {
+        const options = resolveMapOptions(config, { rememberLayerVisibility: value });
+        assert.equal(options.rememberLayerVisibility, value);
+        assert.equal(options.rememberLastPosition, 'page');
+        assert.equal(resolveMapOptions({ rememberLayerVisibility: value }).rememberLayerVisibility, value);
+    }
+});
+
 test('interaction fields independently inherit the existing defaults', () => {
     assert.deepEqual(resolveMapOptions().interaction, {
         dragRotate: false,

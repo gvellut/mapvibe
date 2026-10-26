@@ -27,6 +27,7 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
   - `customUi.controls`: Named controls with visibility, position, and constructor options (see below).
   - `customUi.interaction`: Optional gesture settings (see below).
   - `customUi.rememberLastPosition`: Optional remembered-position default; accepts `false`, `0`, `true`, `1`, `"page"`, or `"domain"`. Default: `false`.
+  - `customUi.rememberLayerVisibility`: Optional remembered background/data visibility; accepts the same values as `rememberLastPosition`. Default: `false`.
   - `customUi.globalMinZoom` / `globalMaxZoom`: Clamp zoom range for all backgrounds.
 - On startup, MapVibe hides all top-style layers first, then applies visibility from `customUi.backgroundLayers` and `customUi.dataLayers`. Raw top-style `layout.visibility` does not control initial visibility.
 - The layer chooser still uses a single selected background at a time. Selecting a background entry hides the other managed backgrounds and restores that entry's top-style/import members as one virtual background.
@@ -76,7 +77,7 @@ The following `interaction` defaults preserve current behavior. Missing fields i
 
 `dragRotate` enables mouse rotation and pitch. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices, including iPads using either mobile or desktop browser mode. Detection requires touch support plus a mobile user agent, or a `MacIntel` platform with more than one touch point for iPadOS desktop mode. Windows touchscreen desktops retain desktop behavior. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
 
-[Sample 6](samples/sample6/config.json) demonstrates the richer format; samples 1–5 retain legacy boolean controls.
+[Sample 6](samples/sample6/config.json) demonstrates the richer format and enables remembered layer visibility per page; samples 1–5 retain legacy boolean controls.
 
 ### Notes
 
@@ -95,9 +96,15 @@ To remember the last map position, use `rlp=page` or `rlp=domain` in the standal
 - `rlp=1` is the same as `rlp=page`
 - `rlp=0` disables the feature and ignores any saved position
 
+To remember layer visibility, configure `customUi.rememberLayerVisibility` or use `rlv=page` / `rlv=domain` in the standalone URL. `rlv=1` means `page`; `rlv=0` disables persistence and ignores saved choices without deleting them. Boolean URL strings (`true`, `yes`, `y`, `false`, `no`, `n`) are also accepted, as with `rlp`.
+
+On first use, visibility follows the config. Later loads restore the selected background and each data layer's visible or hidden state using their `customUi` IDs. A saved background that no longer exists falls back to the configured default (or the first background). Removed data IDs are ignored; newly added data IDs use their config visibility, which defaults to visible. Initial choices are saved even if no controls are used. Explicit changes from the built-in chooser and host layer controls are remembered; reordering and removal remain session-only.
+
+Both persistence settings use localStorage independently. `page` uses hostname + path; `domain` uses hostname across paths. Query parameters, including `config`, do not separate saved choices, so different configs within the same scope share storage. Invalid or inaccessible saved visibility falls back to config defaults.
+
 To override the fullscreen button in the standalone `/mapvibe` app, use `fs=y` to force-enable it or `fs=0`, `fs=n`, or `fs=no` to force-disable it. Visibility overrides preserve the control's configured options and position. The fullscreen button opens the new tab with `fs=no` so that view does not show another fullscreen button.
 
-Absent or invalid `mgc`, `rlp`, and `fs` values defer to JSON and then defaults. URL parsing stays in the standalone app; it passes one `runtimeOptions` prop to the library. No URL overrides are provided for the other controls.
+Absent or invalid `mgc`, `rlp`, `rlv`, and `fs` values defer to JSON and then defaults. URL parsing stays in the standalone app; it passes one `runtimeOptions` prop to the library. No URL overrides are provided for the other controls.
 
 When enabled, the remembered position takes precedence over `center`, `zoom`, `bounds`, and auto-fit-to-data on reload.
 
@@ -252,7 +259,8 @@ Use `runtimeOptions` for host-provided overrides:
   runtimeOptions={{
     controls: { fullscreen: false, Geolocate: true },
     mobileCooperativeGestures: false,
-    rememberLastPosition: "page"
+    rememberLastPosition: "page",
+    rememberLayerVisibility: "page"
   }}
 />
 ```
@@ -265,6 +273,8 @@ Use `runtimeOptions` for host-provided overrides:
 - `"domain"`: remember pan/zoom per host across paths
 
 When a remembered position exists, it overrides `config.center`, `config.zoom`, `config.bounds`, and the automatic fit-to-sources fallback.
+
+`runtimeOptions.rememberLayerVisibility` accepts the same values and scopes as `rememberLastPosition`, independently of position persistence. Its explicit value overrides `customUi.rememberLayerVisibility`, including `false` and `0`; otherwise the config value applies, then the default of `false`. It is resolved at initialization. The public `RememberLayerVisibilityValue` and `RememberLayerVisibilityScope` types are exported from `mapvibe`.
 
 ### Host-supplied React controls
 
@@ -313,7 +323,7 @@ const controlComponents = { MyLayers };
 - `layers.backgroundLayers`, `layers.dataLayers`, `layers.selectedBackgroundLayer`, and `layers.visibleDataLayers` are the shared current state used by both host controls and the built-in chooser.
 - `selectBackground(id)` and `setDataLayerVisible(id, visible)` use Mapvibe's existing background, imported-style, and visibility behavior.
 - `moveLayer(group, id, toIndex)` reorders within `'background'` or `'data'`. Background moves change the chooser order. Data moves also change map stacking: the last data entry paints highest; each entry retains its member order and backgrounds remain below overlays.
-- `removeLayer(group, id)` removes a logical entry for the current session and hides its map content. Removing the selected background selects the first remaining one; the last background cannot be removed. Sources/styles stay allocated until the map is disposed. Remounting restores the configured entries and visibility.
+- `removeLayer(group, id)` removes a logical entry for the current session and hides its map content. Removing the selected background selects the first remaining one; the last background cannot be removed. Sources/styles stay allocated until the map is disposed. Remounting restores the configured entries and order, with remembered visibility when enabled, otherwise config visibility. Removal and its automatic background fallback do not overwrite remembered choices.
 - Background and data entries support an optional `thumbnailUrl`. Mapvibe preserves this UI metadata; the host decides how to render thumbnails and fallbacks. The built-in chooser remains text-only.
 
 ### Accessing the MapLibre Instance

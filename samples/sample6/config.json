@@ -60,6 +60,7 @@
             "mobileCooperativeGestures": true
         },
         "rememberLastPosition": false,
+        "rememberLayerVisibility": "page",
         "backgroundLayers": [
             { "id": "light", "name": "Light", "layerIds": ["light"], "visible": true },
             { "id": "dark", "name": "Dark", "layerIds": ["dark"] }

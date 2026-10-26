@@ -1,4 +1,3 @@
-* [Layer visiblity memory](M_tasks/N_Layer_visiblity_memory.md)
 - [Header additional](A_tasks/L_Header.md)
 - [Runtime controls simpllify only fullscreen](M_tasks/O_Runtime_controls_simpllify_only_fullscreen.md)
 - [coherent stacking order of layers](M_tasks/P_coherent_stacking_order_of_layers.md)
@@ -15,3 +14,4 @@
 ! [Fullscreen override](A_tasks/J_Fullscreen_override.md)
 ! [Controls more detailed in JSON](A_tasks/K_Controls_more_detailed_in_JSON.md)
 ! [auto Geolocate](M_tasks/M_auto_Geolocate.md)
+! [Layer visiblity memory](M_tasks/N_Layer_visiblity_memory.md)

@@ -30,3 +30,7 @@ export type {
     RememberLastPositionValue,
     RememberLastPositionScope
 } from './map/rememberLastPosition';
+export type {
+    RememberLayerVisibilityValue,
+    RememberLayerVisibilityScope
+} from './map/rememberLayerVisibility';

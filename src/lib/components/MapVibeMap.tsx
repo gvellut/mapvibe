@@ -6,6 +6,11 @@ import {
     loadRememberedViewState,
     saveRememberedViewState
 } from '../map/rememberLastPosition';
+import {
+    normalizeRememberLayerVisibility,
+    loadRememberedLayerVisibility,
+    saveRememberedLayerVisibility
+} from '../map/rememberLayerVisibility';
 // URL overrides are parsed by App; the new-tab control sets mgc/fs in controls.ts.
 import { getControlName, resolveMapOptions } from '../map/controlConfig';
 import { installControls } from '../map/controls';
@@ -67,7 +72,15 @@ export const MapVibeMap = ({
     const [layerChooserHost, setLayerChooserHost] = useState<HTMLElement | null>(null);
     const [infoPanelVisible, setInfoPanelVisible] = useState(false);
     const [infoPanelData, setInfoPanelData] = useState<InfoPanelData>({});
-    const [layerState, setLayerState] = useState(() => createLayerState(backgroundCatalog));
+    const rememberLayerVisibilityScope = normalizeRememberLayerVisibility(
+        resolvedOptions.rememberLayerVisibility
+    );
+    const [layerState, setLayerState] = useState(() =>
+        createLayerState(
+            backgroundCatalog,
+            loadRememberedLayerVisibility(rememberLayerVisibilityScope)
+        )
+    );
     const layerStateRef = useRef(layerState);
     const { selectedBackgroundLayer, visibleDataLayers } = layerState;
     const selectedBackgroundLayerRef = useRef(selectedBackgroundLayer);
@@ -77,7 +90,12 @@ export const MapVibeMap = ({
     // Reset chooser state before committing a render with a new configuration.
     if (previousBackgroundCatalog !== backgroundCatalog) {
         setPreviousBackgroundCatalog(backgroundCatalog);
-        setLayerState(createLayerState(backgroundCatalog));
+        setLayerState(
+            createLayerState(
+                backgroundCatalog,
+                loadRememberedLayerVisibility(rememberLayerVisibilityScope)
+            )
+        );
     }
 
     const rememberLastPositionScope = normalizeRememberLastPosition(
@@ -113,6 +131,14 @@ export const MapVibeMap = ({
         visibleDataLayersRef.current = visibleDataLayers;
     }, [visibleDataLayers]);
 
+    useEffect(() => {
+        // Save config defaults on first use and reconciled choices on config replacement.
+        saveRememberedLayerVisibility(
+            rememberLayerVisibilityScope,
+            layerStateRef.current.rememberedVisibility
+        );
+    }, [backgroundCatalog, rememberLayerVisibilityScope]);
+
     useLayoutEffect(() => {
         backgroundRuntimeRef.current = createBackgroundRuntimeState();
     }, [backgroundCatalog]);
@@ -133,32 +159,42 @@ export const MapVibeMap = ({
         []
     );
 
-    const changeLayers = useCallback((action: LayerAction) => {
-        const previous = layerStateRef.current;
-        const next = reduceLayerState(previous, action);
-        if (next === previous) return;
-        // Update refs immediately so consecutive actions and async imports see the same state.
-        layerStateRef.current = next;
-        selectedBackgroundLayerRef.current = next.selectedBackgroundLayer;
-        visibleDataLayersRef.current = next.visibleDataLayers;
-        setLayerState(next);
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-        const catalog = backgroundCatalogRef.current;
-        if (next.selectedBackgroundLayer !== previous.selectedBackgroundLayer) {
-            applyBackgroundSelection(
-                map,
-                next.selectedBackgroundLayer,
-                catalog,
-                backgroundRuntimeRef.current,
-                configRef.current.customUi
-            );
-        }
-        applyDataLayerVisibilitySelection(map, catalog, next.visibleDataLayers);
-        if (action.type === 'move' && action.group === 'data') {
-            applyDataLayerOrder(map, catalog, next.dataIds, backgroundRuntimeRef.current);
-        }
-    }, []);
+    const changeLayers = useCallback(
+        (action: LayerAction) => {
+            const previous = layerStateRef.current;
+            const next = reduceLayerState(previous, action);
+            if (next === previous) return;
+            // Update refs immediately so consecutive actions and async imports see the same state.
+            layerStateRef.current = next;
+            selectedBackgroundLayerRef.current = next.selectedBackgroundLayer;
+            visibleDataLayersRef.current = next.visibleDataLayers;
+            // Save explicit choices immediately; session-only moves/removals retain this snapshot.
+            if (next.rememberedVisibility !== previous.rememberedVisibility) {
+                saveRememberedLayerVisibility(
+                    rememberLayerVisibilityScope,
+                    next.rememberedVisibility
+                );
+            }
+            setLayerState(next);
+            const map = mapRef.current?.getMap();
+            if (!map) return;
+            const catalog = backgroundCatalogRef.current;
+            if (next.selectedBackgroundLayer !== previous.selectedBackgroundLayer) {
+                applyBackgroundSelection(
+                    map,
+                    next.selectedBackgroundLayer,
+                    catalog,
+                    backgroundRuntimeRef.current,
+                    configRef.current.customUi
+                );
+            }
+            applyDataLayerVisibilitySelection(map, catalog, next.visibleDataLayers);
+            if (action.type === 'move' && action.group === 'data') {
+                applyDataLayerOrder(map, catalog, next.dataIds, backgroundRuntimeRef.current);
+            }
+        },
+        [rememberLayerVisibilityScope]
+    );
 
     const applySelectedBackground = useCallback(
         (backgroundId: string, options?: { updateState?: boolean; closeChooser?: boolean }) => {
