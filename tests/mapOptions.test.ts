@@ -326,12 +326,14 @@ test('remembered layer visibility is independent, disabled by default, and follo
 test('interaction fields independently inherit the existing defaults', () => {
     assert.deepEqual(resolveMapOptions().interaction, {
         dragRotate: false,
+        keyboardRotate: false,
         touchRotation: false,
         touchPitch: false,
         mobileCooperativeGestures: true
     });
     assert.deepEqual(resolveMapOptions({ interaction: { touchPitch: true } }).interaction, {
         dragRotate: false,
+        keyboardRotate: false,
         touchRotation: false,
         touchPitch: true,
         mobileCooperativeGestures: true
@@ -346,6 +348,12 @@ function mockInteractionMap() {
     });
     const map = {
         dragRotate: handler('dragRotate'),
+        keyboard: {
+            enableRotation: () => calls.push('keyboard.enableRotation'),
+            disableRotation: () => calls.push('keyboard.disableRotation'),
+            enable: () => assert.fail('Keyboard pan and zoom must not be toggled'),
+            disable: () => assert.fail('Keyboard pan and zoom must not be toggled')
+        },
         touchPitch: handler('touchPitch'),
         cooperativeGestures: handler('cooperativeGestures'),
         touchZoomRotate: {
@@ -363,6 +371,7 @@ test('default interactions disable rotation and pitch while preserving pinch zoo
     applyInteractions(map, resolveMapOptions().interaction, true);
     assert.deepEqual(calls, [
         'dragRotate.disable',
+        'keyboard.disableRotation',
         'rotation.disable',
         'touchPitch.disable',
         'cooperativeGestures.enable'
@@ -374,16 +383,40 @@ test('enabled interaction fields call their corresponding handlers', () => {
     applyInteractions(
         map,
         resolveMapOptions({
-            interaction: { dragRotate: true, touchRotation: true, touchPitch: true }
+            interaction: {
+                dragRotate: true,
+                keyboardRotate: true,
+                touchRotation: true,
+                touchPitch: true
+            }
         }).interaction,
         false
     );
     assert.deepEqual(calls, [
         'dragRotate.enable',
+        'keyboard.enableRotation',
         'rotation.enable',
         'touchPitch.enable',
         'cooperativeGestures.disable'
     ]);
+});
+
+test('keyboard rotation and tilt default to disabled and are independent of mouse rotation', () => {
+    for (const dragRotate of [false, true]) {
+        for (const keyboardRotate of [undefined, false, true]) {
+            const interaction = resolveMapOptions({
+                interaction: { dragRotate, keyboardRotate }
+            }).interaction;
+            assert.equal(interaction.keyboardRotate, keyboardRotate ?? false);
+            const { map, calls } = mockInteractionMap();
+            applyInteractions(map, interaction, false);
+            assert.equal(calls[0], `dragRotate.${dragRotate ? 'enable' : 'disable'}`);
+            assert.equal(
+                calls[1],
+                `keyboard.${keyboardRotate ? 'enableRotation' : 'disableRotation'}`
+            );
+        }
+    }
 });
 
 test('cooperative gestures stay disabled on desktop and respect a mobile runtime override', () => {

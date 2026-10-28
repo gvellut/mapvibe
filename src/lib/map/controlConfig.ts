@@ -94,6 +94,7 @@ export interface ResolvedCustomControl {
 
 export interface InteractionConfig {
     dragRotate?: boolean;
+    keyboardRotate?: boolean;
     touchRotation?: boolean;
     touchPitch?: boolean;
     mobileCooperativeGestures?: boolean;
@@ -125,6 +126,7 @@ export interface ResolvedMapOptions {
 
 const DEFAULT_INTERACTION: Required<InteractionConfig> = {
     dragRotate: false,
+    keyboardRotate: false,
     touchRotation: false,
     touchPitch: false,
     mobileCooperativeGestures: true

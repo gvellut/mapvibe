@@ -64,18 +64,19 @@ Geolocation's `trackUserLocation` accepts `true`, `false`, or `"auto"` (the defa
 
 Geolocation requires browser support, a secure context (HTTPS or localhost), and permission; an iframe host may also need `allow="geolocation"`. It requests location when its button is used. `"auto"` only selects tracking mode and does not request location or activate tracking on map load.
 
-The following `interaction` defaults preserve current behavior. Missing fields inherit these values:
+Configure interactions under `customUi.interaction`. Missing fields inherit these defaults:
 
 ```json
 "interaction": {
   "dragRotate": false,
+  "keyboardRotate": false,
   "touchRotation": false,
   "touchPitch": false,
   "mobileCooperativeGestures": true
 }
 ```
 
-`dragRotate` enables mouse rotation and pitch. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices, including iPads using either mobile or desktop browser mode. Detection requires touch support plus a mobile user agent, or a `MacIntel` platform with more than one touch point for iPadOS desktop mode. Windows touchscreen desktops retain desktop behavior. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
+`dragRotate` enables mouse rotation and pitch. Set `keyboardRotate` to `true` to enable Shift+Left/Right rotation and Shift+Up/Down tilt independently of `dragRotate`. Keyboard rotation and tilt are disabled by default, including in existing configs that omit this field; arrow-key panning and keyboard zoom remain enabled. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices, including iPads using either mobile or desktop browser mode. Detection requires touch support plus a mobile user agent, or a `MacIntel` platform with more than one touch point for iPadOS desktop mode. Windows touchscreen desktops retain desktop behavior. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
 
 [Sample 6](samples/sample6/config.json) demonstrates the richer format and enables remembered layer visibility per page; samples 1–5 retain legacy boolean controls.
 

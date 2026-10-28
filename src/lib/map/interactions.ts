@@ -3,7 +3,7 @@ import type { InteractionConfig } from './controlConfig';
 
 type InteractionMap = Pick<
     Map,
-    'dragRotate' | 'touchZoomRotate' | 'touchPitch' | 'cooperativeGestures'
+    'dragRotate' | 'keyboard' | 'touchZoomRotate' | 'touchPitch' | 'cooperativeGestures'
 >;
 
 export function applyInteractions(
@@ -15,6 +15,12 @@ export function applyInteractions(
         map.dragRotate.enable();
     } else {
         map.dragRotate.disable();
+    }
+    // Toggle keyboard rotation and tilt independently, preserving keyboard pan and zoom.
+    if (interaction.keyboardRotate) {
+        map.keyboard.enableRotation();
+    } else {
+        map.keyboard.disableRotation();
     }
     // Toggle touch rotation independently, preserving pinch zoom.
     if (interaction.touchRotation) {

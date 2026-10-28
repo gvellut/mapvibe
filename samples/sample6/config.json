@@ -55,6 +55,7 @@
         },
         "interaction": {
             "dragRotate": true,
+            "keyboardRotate": true,
             "touchRotation": true,
             "touchPitch": true,
             "mobileCooperativeGestures": true
