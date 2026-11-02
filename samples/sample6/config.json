@@ -46,7 +46,7 @@
             "Scale": { "options": { "unit": "nautical", "maxWidth": 120 } },
             "LayerChooser": { "position": "top-right" },
             "Fullscreen": { "position": "top-left" },
-            "Attribution": {
+            "InitiallyCollapsedAttribution": {
                 "options": { "compact": true, "customAttribution": "Mapvibe controls sample" }
             },
             "Geolocate": {

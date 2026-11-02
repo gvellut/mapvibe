@@ -1,6 +1,17 @@
 /* Import MapLibre GL JS CSS */
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
+/* Prevent rapid toggle clicks from selecting attribution text. */
+.mapvibe-initially-collapsed-attribution {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Keep the custom attribution focus ring for keyboard navigation. */
+.mapvibe-initially-collapsed-attribution .maplibregl-ctrl-attrib-button:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
 /* 
   SIDE PANEL STYLES
 */

@@ -9,6 +9,7 @@ import {
 import { resolveGeolocateOptions, type ResolvedControl } from './controlConfig';
 import { isMobile } from '../utils/deviceDetection';
 import { ReactControlHost } from './reactControlHost';
+import { InitiallyCollapsedAttributionControl } from './initiallyCollapsedAttributionControl';
 
 export class FullscreenControl implements IControl {
     private container: HTMLDivElement | undefined;
@@ -65,6 +66,10 @@ export function installControls(
                 break;
             case 'AttributionControl':
                 control = new AttributionControl(config.options);
+                break;
+            case 'InitiallyCollapsedAttributionControl':
+                // Keep initial collapse opt-in; the standard attribution control retains its behavior.
+                control = new InitiallyCollapsedAttributionControl(config.options);
                 break;
             case 'GeolocateControl':
                 // Select tracking mode without activating geolocation.

@@ -28,14 +28,58 @@ test('missing controls enable the existing five with their previous defaults', (
             ['LayerChooserControl', 'top-right'],
             ['FullscreenControl', 'top-left'],
             ['AttributionControl', 'bottom-left'],
-            ['GeolocateControl', 'top-left']
+            ['GeolocateControl', 'top-left'],
+            ['InitiallyCollapsedAttributionControl', 'bottom-left']
         ]
     );
     assert.deepEqual(options.controls[0].options, { showCompass: false });
     assert.deepEqual(options.controls[1].options, { unit: 'metric' });
     assert.deepEqual(options.controls[4].options, { compact: false });
     assert.deepEqual(options.controls[5].options, { trackUserLocation: 'auto' });
+    assert.deepEqual(options.controls[6].options, { compact: true });
+    assert.equal(options.controls[6].visible, false);
     assert.equal(options.rememberLastPosition, false);
+});
+
+test('initially collapsed attribution is opt-in with compact defaults for either name', () => {
+    for (const name of ['InitiallyCollapsedAttributionControl', 'InitiallyCollapsedAttribution']) {
+        for (const value of [true, {}]) {
+            const resolved = resolveMapOptions({ controls: { [name]: value } });
+            assert.deepEqual(resolved.controls, [{
+                name: 'InitiallyCollapsedAttributionControl',
+                visible: true,
+                position: 'bottom-left',
+                options: { compact: true }
+            }]);
+        }
+        assert.equal(resolveMapOptions({ controls: { [name]: false } }).controls[0].visible, false);
+    }
+});
+
+test('initially collapsed attribution preserves options and position through visibility overrides', () => {
+    const config = { controls: {
+        InitiallyCollapsedAttribution: {
+            visible: false,
+            position: 'top-right' as const,
+            options: { compact: false, customAttribution: ['First', 'Second'] }
+        }
+    } };
+    const original = structuredClone(config);
+    const resolved = resolveMapOptions(config, { controls: { InitiallyCollapsedAttributionControl: true } });
+    assert.deepEqual(resolved.controls, [{
+        name: 'InitiallyCollapsedAttributionControl',
+        visible: true,
+        position: 'top-right',
+        options: { compact: false, customAttribution: ['First', 'Second'] }
+    }]);
+    assert.deepEqual(config, original);
+    assert.equal(resolveMapOptions(config, { controls: { InitiallyCollapsedAttribution: false } }).controls[0].visible, false);
+    assert.deepEqual(resolveMapOptions({ controls: {} }, { controls: { InitiallyCollapsedAttribution: true } }).controls, [{
+        name: 'InitiallyCollapsedAttributionControl',
+        visible: true,
+        position: 'bottom-left',
+        options: { compact: true }
+    }]);
 });
 
 test('geolocation defaults to auto for boolean and object control entries', () => {
@@ -140,7 +184,8 @@ test('full names and names without Control resolve to the same registered types'
             LayerChooserControl: {},
             FullscreenControl: {},
             AttributionControl: {},
-            GeolocateControl: {}
+            GeolocateControl: {},
+            InitiallyCollapsedAttributionControl: {}
         }
     });
     const short = resolveMapOptions({
@@ -150,7 +195,8 @@ test('full names and names without Control resolve to the same registered types'
             LayerChooser: {},
             Fullscreen: {},
             Attribution: {},
-            Geolocate: {}
+            Geolocate: {},
+            InitiallyCollapsedAttribution: {}
         }
     });
     assert.deepEqual(short.controls, full.controls);

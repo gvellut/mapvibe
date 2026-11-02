@@ -1,6 +1,7 @@
 import './styles/style.scss';
 
 export { MapVibeMap } from './components/MapVibeMap';
+export { InitiallyCollapsedAttributionControl } from './map/initiallyCollapsedAttributionControl';
 export type {
     BackgroundLayerConfig,
     StyleImportConfig,

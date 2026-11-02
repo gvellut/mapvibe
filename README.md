@@ -57,9 +57,12 @@ Names are case-sensitive. Accept the full name below, the same name without `Con
 | `LayerChooserControl` | `layerChooser` | `top-right` | None |
 | `FullscreenControl` | `fullscreen` | `top-left` | None; opens the current URL in a new tab |
 | `AttributionControl` | `attribution` | `bottom-left` | `compact`, `customAttribution` (string or array) ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/AttributionControlOptions/)) |
+| `InitiallyCollapsedAttributionControl` | None | `bottom-left` | `compact` (defaults to `true`), `customAttribution` (string or array) |
 | `GeolocateControl` | `geolocate` | `top-left` | `positionOptions`, `fitBoundsOptions`, `trackUserLocation`, `showUserLocation`, `showAccuracyCircle` ([MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/GeolocateControlOptions/)) |
 
-When `controls` is absent, the existing five controls are enabled with their positions above, zoom buttons without a compass, metric scale, and expanded attribution. Geolocation is disabled. An explicit object enables only its listed entries; `{}` enables none. Options inherit those defaults, then pass to MapLibre after resolving Mapvibe-specific options.
+When `controls` is absent, the existing five controls are enabled with their positions above, zoom buttons without a compass, metric scale, and expanded attribution. Geolocation and the initially collapsed attribution control are disabled. An explicit object enables only its listed entries; `{}` enables none. Options inherit those defaults, then pass to MapLibre after resolving Mapvibe-specific options.
+
+Use `InitiallyCollapsedAttributionControl` (or `InitiallyCollapsedAttribution`) instead of `AttributionControl` to start attribution closed. Compact mode defaults to `true`; attribution remains closed when its text arrives or changes, and the information button still opens and closes it. Mouse clicks leave the information button focused without a blue ring; keyboard focus keeps its focus indicator. Rapid toggle clicks do not select attribution text. Explicit `compact: false` retains MapLibre's expanded behavior. The original `AttributionControl` keeps MapLibre's behavior, which starts expanded even with `compact: true` and collapses on drag. The subclass is also exported for direct use with `map.addControl(new InitiallyCollapsedAttributionControl(options))`.
 
 Geolocation's `trackUserLocation` accepts `true`, `false`, or `"auto"` (the default when omitted). `"auto"` resolves to `true` on detected mobile devices, including iPads, and `false` on desktop. `true` uses MapLibre's tracking toggle; `false` uses its simple location button. Explicit booleans override device detection. The mode is selected when the control is installed and does not change afterward. TypeScript consumers can use the exported `MapVibeGeolocateControlOptions` type.
 
@@ -79,7 +82,7 @@ Configure interactions under `customUi.interaction`. Missing fields inherit thes
 
 `dragRotate` enables mouse rotation and pitch. Set `keyboardRotate` to `true` to enable Shift+Left/Right rotation and Shift+Up/Down tilt independently of `dragRotate`. Keyboard rotation and tilt are disabled by default, including in existing configs that omit this field; arrow-key panning and keyboard zoom remain enabled. `touchRotation` enables two-finger rotation without changing pinch zoom; `touchPitch` enables touch tilt. `mobileCooperativeGestures` applies only on detected mobile devices, including iPads using either mobile or desktop browser mode. Detection requires touch support plus a mobile user agent, or a `MacIntel` platform with more than one touch point for iPadOS desktop mode. Windows touchscreen desktops retain desktop behavior. These settings control gestures, not terrain or 3D rendering. Controls and interactions are configured at initialization.
 
-[Sample 6](samples/sample6/config.json) demonstrates the richer format and enables remembered layer visibility per page; samples 1–5 retain legacy boolean controls.
+[Sample 6](samples/sample6/config.json) demonstrates the richer format, initially collapsed attribution, and remembered layer visibility per page; samples 1–5 retain legacy boolean controls.
 
 ### Notes
 

@@ -18,6 +18,7 @@ interface ControlOptionsByName {
     LayerChooserControl: Record<string, never>;
     FullscreenControl: Record<string, never>;
     AttributionControl: AttributionControlOptions;
+    InitiallyCollapsedAttributionControl: AttributionControlOptions;
     GeolocateControl: MapVibeGeolocateControlOptions;
 }
 
@@ -57,6 +58,12 @@ export const CONTROL_REGISTRY = {
         aliases: ['Geolocate', 'geolocate'],
         position: 'top-left',
         options: { trackUserLocation: 'auto' },
+        visible: false
+    },
+    InitiallyCollapsedAttributionControl: {
+        aliases: ['InitiallyCollapsedAttribution'],
+        position: 'bottom-left',
+        options: { compact: true },
         visible: false
     }
 } as const satisfies {
