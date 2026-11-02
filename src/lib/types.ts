@@ -25,6 +25,7 @@ export interface StyleImportConfig {
 export interface DataLayerConfig {
     id: string;
     name: string;
+    /** Top-style member IDs in bottom-to-top stacking order. */
     layerIds: string[];
     visible?: boolean;
     /** Optional UI image, interpreted by the host control. */
@@ -48,6 +49,7 @@ export interface CustomUiConfig {
     rememberLayerVisibility?: RememberLayerVisibilityValue;
     imports?: StyleImportConfig[];
     backgroundLayers: BackgroundLayerConfig[];
+    /** Chooser order and bottom-to-top map stacking, above all backgrounds. */
     dataLayers: DataLayerConfig[];
     globalMinZoom?: number;
     globalMaxZoom?: number;

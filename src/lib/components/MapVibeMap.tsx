@@ -242,6 +242,13 @@ export const MapVibeMap = ({
         const currentConfig = configRef.current;
         if (!map || !currentConfig) return;
 
+        // Apply customUi stacking before backgrounds use the refreshed overlay boundary.
+        applyDataLayerOrder(
+            map,
+            backgroundCatalogRef.current,
+            layerStateRef.current.dataIds,
+            backgroundRuntimeRef.current
+        );
         applyBackgroundSelection(
             map,
             selectedBackgroundLayerRef.current,

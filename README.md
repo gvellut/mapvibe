@@ -15,8 +15,9 @@ Made with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) and React 
     - `backgroundLayers[].layerIds` references top-style layer ids and/or import ids in bottom-to-top order.
     - Set `visible: true` on one entry to choose the initial GUI selection. If multiple entries set it, MapVibe warns and uses the first. If none set it, MapVibe selects the first background entry.
     - Background entries default to not selected unless `visible: true` is set.
-  - `customUi.dataLayers`: List of data layers (lines, points, polygons) for toggling visibility.
-    - `dataLayers[].layerIds` references top-style layer ids.
+  - `customUi.dataLayers`: List of data layers (lines, points, polygons) in chooser order and bottom-to-top map stacking order. The first entry is lowest and the last highest, above all backgrounds.
+    - `dataLayers[].layerIds` references top-style layer ids in bottom-to-top order within each entry.
+    - The root-level `layers` array supplies MapLibre layer definitions; its order does not determine data-layer stacking. Visibility toggles preserve the configured stacking, including layers that start hidden. Runtime data reordering through the layer controller updates both chooser and map order.
     - Data layers default to visible. Set `visible: false` to start hidden.
     - Set `interactive: true` to make a data layer clickable.
     - Add `clusterInteractive: true` on an interactive clustered data layer to make generated cluster features zoom to their expansion level instead of opening the info panel. When omitted or `false`, cluster clicks are ignored and only non-cluster features remain actionable.

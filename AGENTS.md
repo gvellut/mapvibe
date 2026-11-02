@@ -12,7 +12,7 @@ A static map interface for embedding in blog posts or websites, as a Google My M
 
 After code changes, before returning to the user, run `npm run lint` and `npm run fmt:check`. Apply `npm run lint:fix` or `npm run fmt` only when their changes belong to the requested task; do not rewrite unrelated files to satisfy these checks. Keep lint rules and formatting preferences in the shared root configurations so CLI and VS Code use the same settings.
 
-For changes to the library integration API, validate an external caller as well as the standalone sample; standalone checks alone do not cover consumer bundling and React context.
+For changes to the library integration API or layer stacking, validate an external caller as well as the standalone sample; standalone checks alone do not cover consumer bundling and React context.
 
 When changing interaction settings, validate keyboard pan, zoom, rotation, and tilt in a browser; handler mocks alone do not verify camera behavior.
 

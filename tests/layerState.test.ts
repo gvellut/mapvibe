@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AppConfig } from '../src/lib/types.ts';
 import type { Map } from 'maplibre-gl';
-import { buildBackgroundCatalog, createBackgroundRuntimeState, applyBackgroundSelection } from '../src/lib/styles/backgrounds.ts';
+import { buildBackgroundCatalog, createBackgroundRuntimeState, applyBackgroundSelection, applyDataLayerVisibilitySelection } from '../src/lib/styles/backgrounds.ts';
+import { loadBackgroundImport } from '../src/lib/styles/styleImports.ts';
 import { createLayerState, reduceLayerState, applyDataLayerOrder } from '../src/lib/map/layerState.ts';
 
 function fixture(): AppConfig {
@@ -67,4 +68,83 @@ test('data reordering updates stacking and the boundary for later background swi
     assert.equal(catalog.overlayBoundaryId, 'blue');
     applyBackgroundSelection(map, 'b', catalog, runtime, input.customUi);
     assert.deepEqual(order, ['a', 'b', 'blue', 'red']);
+});
+
+
+test('configured entry and member order survives visibility changes and asynchronous background imports', async (t) => {
+    const input = fixture();
+    // Both entry order and member order deliberately differ from the root style.
+    input.layers = ['blue-labels', 'b', 'red-labels', 'a', 'blue-fill', 'red-fill'].map(
+        (id) => ({ id, type: 'background' })
+    );
+    input.customUi.dataLayers = [
+        { id: 'red', name: 'Red', layerIds: ['red-fill', 'red-labels'] },
+        { id: 'blue', name: 'Blue', layerIds: ['blue-fill', 'blue-labels'], visible: false }
+    ];
+    const original = structuredClone(input);
+    const catalog = buildBackgroundCatalog(input);
+    const runtime = createBackgroundRuntimeState();
+    const initial = createLayerState(catalog);
+    const order = input.layers.map(({ id }) => id);
+    const visibility = new globalThis.Map<string, string>();
+    const map = {
+        getLayer: (id: string) => order.includes(id) ? { id } : undefined,
+        getStyle: () => ({ layers: order.map((id) => ({ id })) }),
+        moveLayer: (id: string, before?: string) => {
+            order.splice(order.indexOf(id), 1);
+            order.splice(before ? order.indexOf(before) : order.length, 0, id);
+        },
+        addLayer: (layer: { id: string }, before?: string) => {
+            order.splice(before ? order.indexOf(before) : order.length, 0, layer.id);
+        },
+        getSprite: () => [],
+        setLayoutProperty: (id: string, _property: string, value: string) => {
+            visibility.set(id, value);
+        },
+        setGlyphs() {}, getZoom: () => 5, setMinZoom() {}, setMaxZoom() {}
+    } as unknown as Map;
+
+    applyDataLayerOrder(map, catalog, initial.dataIds, runtime);
+    applyBackgroundSelection(map, initial.selectedBackgroundLayer, catalog, runtime, input.customUi);
+    applyDataLayerVisibilitySelection(map, catalog, initial.visibleDataLayers);
+    const dataOrder = ['red-fill', 'red-labels', 'blue-fill', 'blue-labels'];
+    assert.deepEqual(order, ['b', 'a', ...dataOrder]);
+    assert.equal(catalog.overlayBoundaryId, 'red-fill');
+    for (const id of ['blue-fill', 'blue-labels']) assert.equal(visibility.get(id), 'none');
+
+    const enabled = reduceLayerState(initial, { type: 'visibility', id: 'blue', visible: true });
+    applyDataLayerVisibilitySelection(map, catalog, enabled.visibleDataLayers);
+    assert.deepEqual(order, ['b', 'a', ...dataOrder]);
+    for (const id of dataOrder) assert.equal(visibility.get(id), 'visible');
+    const hidden = reduceLayerState(enabled, { type: 'visibility', id: 'red', visible: false });
+    applyDataLayerVisibilitySelection(map, catalog, hidden.visibleDataLayers);
+    applyDataLayerVisibilitySelection(map, catalog, enabled.visibleDataLayers);
+    assert.deepEqual(order, ['b', 'a', ...dataOrder]);
+
+    // Exercise actual import materialization against the boundary established at startup.
+    t.mock.method(globalThis, 'fetch', async (url: string) => {
+        assert.equal(url, input.customUi.imports![0].url);
+        return new Response(JSON.stringify({
+            version: 8,
+            sources: {},
+            layers: [{ id: 'land', type: 'background' }, { id: 'labels', type: 'background' }]
+        }), { headers: { 'Content-Type': 'application/json' } });
+    });
+    applyBackgroundSelection(map, 'b', catalog, runtime, input.customUi);
+    await loadBackgroundImport(
+        input.customUi.imports![0],
+        { current: catalog },
+        { current: runtime },
+        { current: { getMap: () => map } },
+        { current: 'b' },
+        (id) => applyBackgroundSelection(map, id, catalog, runtime, input.customUi)
+    );
+    const importedIds = ['__imports_import_land', '__imports_import_labels'];
+    assert.equal(runtime.imports.size, 1);
+    assert.deepEqual(order, ['a', 'b', ...importedIds, ...dataOrder]);
+    for (const id of importedIds) assert.equal(visibility.get(id), 'visible');
+    applyBackgroundSelection(map, 'a', catalog, runtime, input.customUi);
+    assert.deepEqual(order, ['b', ...importedIds, 'a', ...dataOrder]);
+    for (const id of importedIds) assert.equal(visibility.get(id), 'none');
+    assert.deepEqual(input, original);
 });
